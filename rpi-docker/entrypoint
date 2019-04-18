@@ -1,0 +1,17 @@
+#!/bin/bash
+
+exec=$1
+proj="ts-socket.io.server"
+
+# 프로젝트 디렉토리가 있다면..
+if [ -d "/$proj" ]; then
+  echo /$proj "dir exists."
+else # 없다면
+  mkdir /$proj
+fi
+
+cd /$proj
+curl -o archive.tar.gz "$RELEASE_URL"
+tar xvfz archive.tar.gz
+npm install
+$exec
