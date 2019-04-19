@@ -148,6 +148,7 @@ async function openSocket(socket: SocketIOClient.Socket, name: string, config?: 
           throw Error(`':new.bot'에서 '${name}' 이름으로 'ok'하지 않았다.`)
         }
       } catch(err) {
+        socket.close()
         reject(err)
       }
     })
@@ -216,7 +217,7 @@ export class CandleMasterBot<M> extends BaseBot {
 
   async newBot(name: string, config?: CandleBotConfig): Promise<CandleBot<M>> {
     if(name === 'master') {
-      throw Error('master가 될 수 없다.')
+      throw Error('master는 일반 bot이 될 수 없다.')
     }
     const socket = newSocket(this.host)
     await openSocket(socket, name, config)

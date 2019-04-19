@@ -112,44 +112,38 @@ export class CandleBotSpace<M> extends LogSpace {
 
   @OnAckLevel01(':new.bot')
   async onNewBot(socket: Socket, {name, config}: {name: string, config: CandleBotConfig}) {
-    if(config) {
-      if(name === 'master') {
-        throw Error('master는 config를 갖을 수 없다.')
-      }
-      if(this._botDatas[name]) {
-        throw Error(`이미 '${name}'의 이름으로 봇이 존재하므로 다시 config할 수 없다.`)
-      }
-      const key = socket['token']
-      const {timeFrame, markets} = config
-      const host: CrawlHost = Object.assign({}, cf.crawlerHost, {key})
-      this._botDatas[name] = {
-        noticeInterval: 0,
-        config,
-        crawlers: markets.map(market => {
-          switch(market.name) {
-            case Market.Bithumb: {
-              return new BithumbCandleCrawler(market.currency, timeFrame, host)
-              break
-            }
-            case Market.Bitfinex: {
-              return new BitfinexCandleCrawler(market.currency, timeFrame, host)
-              break
-            }
-            default: {
-              throw new ErrorWithStatusCode('지원하지 않는 market 이다.')
-            }
-          }
-        }),
-        haveToStop: false,
-      }
-      const {crawlers} = this._botDatas[name]
-      await Promise.all(crawlers.map(c => c.open()))
-    } else {
-      if((!this._botDatas[name]) && (name !== 'master')) {
-        throw Error(`'${name}' 이름의 Bot이 존재하지 않는다.`)
-      }
-      await p(socket.join, socket)(name)
+    if(name === 'master') {
+      throw Error('master는 일반 bot이 될 수 없다.')
     }
+    if(this._botDatas[name]) {
+      throw Error(`이미 '${name}'의 이름으로 봇이 존재하므로 다시 config할 수 없다.`)
+    }
+    const key = socket['token']
+    const {timeFrame, markets} = config
+    const host: CrawlHost = Object.assign({}, cf.crawlerHost, {key})
+    this._botDatas[name] = {
+      noticeInterval: 0,
+      config,
+      crawlers: markets.map(market => {
+        switch(market.name) {
+          case Market.Bithumb: {
+            return new BithumbCandleCrawler(market.currency, timeFrame, host)
+            break
+          }
+          case Market.Bitfinex: {
+            return new BitfinexCandleCrawler(market.currency, timeFrame, host)
+            break
+          }
+          default: {
+            throw new ErrorWithStatusCode('지원하지 않는 market 이다.')
+          }
+        }
+      }),
+      haveToStop: false,
+    }
+    const {crawlers} = this._botDatas[name]
+    await Promise.all(crawlers.map(c => c.open()))
+    await p(socket.join, socket)(name)
     return 'ok'
   }
 
