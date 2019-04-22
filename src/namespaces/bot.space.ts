@@ -48,22 +48,23 @@ type BotData = {
   config: CandleBotConfig
   crawlers: Array<BithumbCandleCrawler|BitfinexCandleCrawler>
   haveToStop: boolean
-  noticeInterval: number
 }
 
 
-export function templateBtoB(money: number) {
+export function ptBtoB(money: number) {
   const mock = new Mock(money)
   const history: {bitfinex: CandleData, bithumb: CandleData}[] = []
-  return async (self: CandleBotSpace<Mock>, res: CandleResponse): Promise<Mock> => {
+  return async (self: Namespace, res: CandleResponse): Promise<Mock> => {
     const bitfinex = res['bitfinex']
     const bithumb = res['bithumb']
     if(mock.bought) {
       mock.sell(bithumb)
+      self.emit(':sold', mock)
     } else if(history.length !== 0 
       && bitfinex.close > last(history).bitfinex.close
       && bithumb.close <= last(history).bithumb.close) {
       mock.buy(bithumb)
+      self.emit(':bought', mock)
     }
     history.push({bitfinex, bithumb})
     return mock
@@ -77,11 +78,11 @@ const OnLevel01 = On.next(grantPermission('level01')).on()
 @Use((socket, next, ctx) => {
   decodeToken(socket, next, ctx)
 })
-export class CandleBotSpace<M> extends LogSpace {
+export class CandleBotSpace extends LogSpace {
   private _botDatas: {[index: string]: BotData} = {}
 
   constructor(namespace: Namespace
-    , public readonly template: (...args: any[]) => (self: CandleBotSpace<M>, res: CandleResponse) => Promise<M>) {
+    , public readonly processTemplate: (...args: any[]) => (self: Namespace, res: CandleResponse) => Promise<any>) {
     super(namespace)
   }
 
@@ -118,11 +119,11 @@ export class CandleBotSpace<M> extends LogSpace {
     if(this._botDatas[name]) {
       throw Error(`이미 '${name}'의 이름으로 봇이 존재하므로 다시 config할 수 없다.`)
     }
+    config = Object.assign({progressInterval: 100}, config)
     const key = socket['token']
     const {timeFrame, markets} = config
     const host: CrawlHost = Object.assign({}, cf.crawlerHost, {key})
     this._botDatas[name] = {
-      noticeInterval: 0,
       config,
       crawlers: markets.map(market => {
         switch(market.name) {
@@ -135,7 +136,7 @@ export class CandleBotSpace<M> extends LogSpace {
             break
           }
           default: {
-            throw new ErrorWithStatusCode('지원하지 않는 market 이다.')
+            throw Error('지원하지 않는 market 이다.')
           }
         }
       }),
@@ -147,81 +148,55 @@ export class CandleBotSpace<M> extends LogSpace {
     return 'ok'
   }
 
-  // @OnWrapped(':config')
-  // async onConfig(socket: Socket, config: CandleBotConfig) {
-  //   if(socket['user']) {
-  //     throw new ErrorWithStatusCode('config는 이미 세팅 됐다.')
-  //   }
-  //   const {key, timeFrame, markets} = config
-  //   const host: CrawlHost = Object.assign({}, cf.crawlerHost, {key})
-  //   socket['user'] = {
-  //     config,
-  //     crawlers: markets.map(market => {
-  //       switch(market.name) {
-  //         case Market.Bithumb: {
-  //           return new BithumbCandleCrawler(market.currency, timeFrame, host)
-  //           break
-  //         }
-  //         case Market.Bitfinex: {
-  //           return new BitfinexCandleCrawler(market.currency, timeFrame, host)
-  //           break
-  //         }
-  //         default: {
-  //           throw new ErrorWithStatusCode('지원하지 않는 market 이다.')
-  //         }
-  //       }
-  //     }),
-  //     haveToStop: false,
-  //   }
-  //   const {crawlers} = this._getUserData(socket)
-  //   await Promise.all(crawlers.map(c => c.open()))
-  //   return 'ok'
-  // }
-
-  // @OnWrapped(':start')
-  // async onStart(socket: Socket) {
-  //   const user = this._getUserData(socket)
-  //   if(!user) {
-  //     throw new ErrorWithStatusCode('먼저 Config를 세팅해야 한다.')
-  //   }
-  //   if(user.haveToStop) {
-  //     throw Error('이미 stop 했다.')
-  //   }
-  //   const {config, crawlers} = user
-  //   let promised: CandleData[]
-  //   if(user.config.startTime) {
-  //     const ps = crawlers.map(c => c.crawlAtTime(config.startTime))
-  //     promised = await Promise.all(ps)
-  //   } else {
-  //     promised = await Promise.all(crawlers.map(c => this._getCandle(c)))
-  //   }
-  //   const max = Math.max(...promised.map(c => c.mts))
-  //   promised = await Promise.all(promised.map(async (p, idx) => {
-  //     let pp = Object.assign({}, p)
-  //     while(pp.mts < max) {
-  //       pp = await this._getCandle(crawlers[idx], p)
-  //     }
-  //     return pp
-  //   }))
-  //   let mock: M = null
-  //   while(true) {
-  //     const res = config.markets.reduce((res: CandleResponse, market, idx) => {
-  //       res[market.id] = promised[idx]
-  //       return res
-  //     }, {})
-  //     mock = await this.process(mock, res)
-  //     if(mock.history.length % 100 === 0) {
-  //       const h = mock.history.slice(mock.history.length - 100)
-  //       socket.emit(':process', h)
-  //     }
-  //     if(user.haveToStop || 
-  //       config.endTime && promised[0].mts + (config.timeFrame * 60 * 1000) >= config.endTime) {
-  //       break
-  //     }
-  //     promised = await Promise.all(crawlers.map((c, i) => this._getCandle(c, promised[i])))
-  //   }
-  //   return mock
-  // }
+  @OnAckLevel01(':start')
+  async onStart(socket: Socket, name: string) {
+    const botData = this._botDatas[name]
+    if(!botData) {
+      throw Error('먼저 Config를 세팅해야 한다.')
+    }
+    const belong = await this.onIds(socket, name)
+    if(!belong.includes(socket.id)) {
+      throw Error(`'${name}'에 속해있지 않은 socket이 자격없는 요청을 했다.`)
+    }
+    if(botData.haveToStop) {
+      throw Error('이미 stop 했다.')
+    }
+    const {config, crawlers} = botData
+    let promised: CandleData[]
+    if(botData.config.startTime) {
+      const ps = crawlers.map(c => c.crawlAtTime(config.startTime))
+      promised = await Promise.all(ps)
+    } else {
+      promised = await Promise.all(crawlers.map(c => this._getCandle(c)))
+    }
+    const max = Math.max(...promised.map(c => c.mts))
+    promised = await Promise.all(promised.map(async (p, idx) => {
+      let pp = Object.assign({}, p)
+      while(pp.mts < max) {
+        pp = await this._getCandle(crawlers[idx], p)
+      }
+      return pp
+    }))
+    let mock = null
+    const process = this.processTemplate(config.processArg)
+    let count = 0
+    while(true) {
+      const res = config.markets.reduce((res: CandleResponse, market, idx) => {
+        res[market.id] = promised[idx]
+        return res
+      }, {})
+      mock = await process(this.namespace.to(name), res)
+      if(++count % config.progressInterval % 100 === 0) {
+        this.namespace.to(name).emit(':progress', count)
+      }
+      if(botData.haveToStop || 
+        config.endTime && promised[0].mts + (config.timeFrame * 60 * 1000) >= config.endTime) {
+        break
+      }
+      promised = await Promise.all(crawlers.map((c, i) => this._getCandle(c, promised[i])))
+    }
+    return mock
+  }
 
   // @OnWrapped(':stop')
   // onStop(socket: Socket): void {

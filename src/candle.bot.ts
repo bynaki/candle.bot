@@ -14,6 +14,7 @@ import {
 } from 'lodash'
 import * as dayjs from 'dayjs'
 import { hostname } from 'os';
+import { on } from 'cluster';
 
 
 export type CandleResponse = {
@@ -22,10 +23,23 @@ export type CandleResponse = {
 
 
 export class Mock {
+  readonly money: number
   readonly history: {buy: CandleData, sell: CandleData}[] = []
   bought: CandleData = null
 
-  constructor(public money: number) {}
+  constructor(money: number)
+  constructor(ref: Mock)
+  constructor(arg: any) {
+    if(typeof arg === 'number') {
+      this.money = arg
+    } else if(arg.money && arg.history && arg.bought !== undefined) {
+      this.money = arg.money
+      this.history = arg.history
+      this.bought = arg.bought
+    } else {
+      throw Error('원하는 인수 타입이 아니다.')
+    }
+  }
 
   buy(candle: CandleData) {
     if(this.bought) {
@@ -103,6 +117,8 @@ export interface CandleBotConfig {
   timeFrame: TimeFrame
   startTime?: number
   endTime?: number
+  progressInterval?: number
+  processArg?: any
   markets: ({
     id: string
     name: Market.Bithumb
@@ -113,6 +129,7 @@ export interface CandleBotConfig {
     currency: BitfinexCC
   })[]
 }
+
 
 export type BotHost = {
   url: string
@@ -194,7 +211,7 @@ class BaseBot {
 }
 
 
-export class CandleMasterBot<M> extends BaseBot {
+export class CandleMasterBot extends BaseBot {
   constructor(public readonly host: BotHost) {
     super('master', newSocket(host))
   }
@@ -211,11 +228,11 @@ export class CandleMasterBot<M> extends BaseBot {
     return this._ack(':be.bot', name)
   }
 
-  async getBot(name: string): Promise<CandleBot<M>> {
+  async getBot(name: string): Promise<CandleBot> {
     return this.newBot(name)
   }
 
-  async newBot(name: string, config?: CandleBotConfig): Promise<CandleBot<M>> {
+  async newBot(name: string, config?: CandleBotConfig): Promise<CandleBot> {
     if(name === 'master') {
       throw Error('master는 일반 bot이 될 수 없다.')
     }
@@ -223,25 +240,28 @@ export class CandleMasterBot<M> extends BaseBot {
     await openSocket(socket, name, config)
     return new CandleBot(name, socket)
   }
-
-  // async getBot(name: string): Promise<CandleBot<M>> {
-  //   const ids = await this.botIds(name)
-  //   if(ids.length !== 0) {
-  //     return this.newBot(name)
-  //   } else {
-  //     return null
-  //   }
-  // }
 }
 
 
-export class CandleBot<M> extends BaseBot {
+interface IMockConstructor<M> {
+  new (ref: M): M
+}
+
+export class CandleBot extends BaseBot {
   constructor(name: string, socket: SocketIOClient.Socket) {
     super(name, socket)
   }
 
-  start(): Promise<M> {
-    return this._ack(':start', this.name)
+  on(evt: ':progress', cb: (count: number) => void): SocketIOClient.Emitter
+  on<M>(evt: ':sold', cb: (mock: M) => void): SocketIOClient.Emitter
+  on<M>(evt: ':bought', cb: (mock: M) => void): SocketIOClient.Emitter
+  on(evt: string, cb: (res: any) => void): SocketIOClient.Emitter {
+    return super.on(evt, cb)
+  }
+
+  async start<M>(constructor: IMockConstructor<M>): Promise<M> {
+    const ref = await this._ack(':start', this.name)
+    return new constructor(ref)
   }
 
   stop(): Promise<void> {
