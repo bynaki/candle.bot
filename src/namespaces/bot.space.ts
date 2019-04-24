@@ -43,11 +43,17 @@ import {
 import p from 'fourdollar.promisify'
 import * as cf from '../config'
 
+enum Working {
+  yet = 'yet',
+  doing = 'doing',
+  done = 'done',
+}
 
 type BotData = {
   config: CandleBotConfig
   crawlers: Array<BithumbCandleCrawler|BitfinexCandleCrawler>
   haveToStop: boolean
+  working: Working
 }
 
 
@@ -141,6 +147,7 @@ export class CandleBotSpace extends LogSpace {
         }
       }),
       haveToStop: false,
+      working: Working.yet,
     }
     const {crawlers} = this._botDatas[name]
     await Promise.all(crawlers.map(c => c.open()))
@@ -148,8 +155,7 @@ export class CandleBotSpace extends LogSpace {
     return 'ok'
   }
 
-  @OnAckLevel01(':start')
-  async onStart(socket: Socket, name: string) {
+  private async _validBotData(socket: Socket, name: string): Promise<BotData> {
     const botData = this._botDatas[name]
     if(!botData) {
       throw Error('먼저 Config를 세팅해야 한다.')
@@ -158,6 +164,12 @@ export class CandleBotSpace extends LogSpace {
     if(!belong.includes(socket.id)) {
       throw Error(`'${name}'에 속해있지 않은 socket이 자격없는 요청을 했다.`)
     }
+    return botData
+  }
+
+  @OnAckLevel01(':start')
+  async onStart(socket: Socket, name: string): Promise<any> {
+    const botData = await this._validBotData(socket, name)
     if(botData.haveToStop) {
       throw Error('이미 stop 했다.')
     }
@@ -180,6 +192,9 @@ export class CandleBotSpace extends LogSpace {
     let mock = null
     const process = this.processTemplate(config.processArg)
     let count = 0
+    const namespace = this.namespace.to(name)
+    botData.working = Working.doing
+    namespace.emit(':started')
     while(true) {
       const res = config.markets.reduce((res: CandleResponse, market, idx) => {
         res[market.id] = promised[idx]
@@ -187,7 +202,7 @@ export class CandleBotSpace extends LogSpace {
       }, {})
       mock = await process(this.namespace.to(name), res)
       if(++count % config.progressInterval % 100 === 0) {
-        this.namespace.to(name).emit(':progress', count)
+        namespace.emit(':progress', count)
       }
       if(botData.haveToStop || 
         config.endTime && promised[0].mts + (config.timeFrame * 60 * 1000) >= config.endTime) {
@@ -195,14 +210,39 @@ export class CandleBotSpace extends LogSpace {
       }
       promised = await Promise.all(crawlers.map((c, i) => this._getCandle(c, promised[i])))
     }
+    botData.working = Working.done
+    namespace.emit(':stoped')
     return mock
   }
 
-  // @OnWrapped(':stop')
-  // onStop(socket: Socket): void {
-  //   const user = this._getUserData(socket)
-  //   user.haveToStop = true
-  // }
+  @OnAckLevel01(':stop')
+  async onStop(socket: Socket, name: string): Promise<string> {
+    const botData = await this._validBotData(socket, name)
+    switch(botData.working) {
+      case Working.yet: {
+        throw Error('아직 start하지 않았다.')
+      }
+      case Working.doing: {
+        botData.haveToStop = true
+        return 'ok'
+      }
+      case Working.done: {
+        return 'done'
+      }
+    }
+  }
+
+  @OnAckLevel01(':be.started')
+  async onStarted(socket: Socket, name: string): Promise<boolean> {
+    const botData = await this._validBotData(socket, name)
+    return botData.working === Working.doing
+  }
+
+  @OnAckLevel01(':be.stoped')
+  async onStoped(socket: Socket, name: string): Promise<boolean> {
+    const botData = await this._validBotData(socket, name)
+    return botData.working === Working.done
+  }
 
   @OnWrapped('*')
   notFound() {

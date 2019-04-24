@@ -253,6 +253,8 @@ export class CandleBot extends BaseBot {
   }
 
   on(evt: ':progress', cb: (count: number) => void): SocketIOClient.Emitter
+  on(evt: ':started', cb: () => void): SocketIOClient.Emitter
+  on(evt: ':stoped', cb: () => void): SocketIOClient.Emitter
   on<M>(evt: ':sold', cb: (mock: M) => void): SocketIOClient.Emitter
   on<M>(evt: ':bought', cb: (mock: M) => void): SocketIOClient.Emitter
   on(evt: string, cb: (res: any) => void): SocketIOClient.Emitter {

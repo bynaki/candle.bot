@@ -60,6 +60,21 @@ test.after(() => {
   io.close()
 })
 
+test.serial('CandleMasterBot > unauthorized', async t => {
+  const master = new CandleMasterBot({
+    url: 'http://localhost:4001/candlebot',
+    version: 'v1',
+    key: auth.sign({user: 'naki', permissions: ['badlevel']}),
+  })
+  try {
+    await master.open()
+  } catch(e) {
+    const err: ErrorWithStatusCode = e
+    t.is(err.message, 'Unauthorized: denied')
+    t.is(err.status, 401)
+  }
+})
+
 test.serial('CandleMasterBot > :ids', async t => {
   const ids = await master.ids()
   t.is(ids[0], master.id)
