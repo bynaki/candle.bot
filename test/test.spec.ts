@@ -18,6 +18,7 @@ import {
   Market,
   BitfinexCC,
   BithumbCC,
+  ProcessStatus,
 } from '../src'
 
 
@@ -39,7 +40,7 @@ test.before(async () => {
   await master.open()
   bot01 = await master.newBot('bot01', {
     startTime: new Date('2019.01.01 12:00').getTime(),
-    endTime: new Date('2019.01.01 13:00').getTime(),
+    endTime: new Date('2019.01.01 14:05').getTime(),
     timeFrame: TimeFrame.t1m,
     processArg: 1000000,
     progressInterval: 10,
@@ -162,29 +163,108 @@ test.serial('CandleMasterBot > :get.bot > error: \'none\' 이름의 Bot이 존�
   }
 })
 
-
-test('CandleBot > :start', async t => {
+test.only('CandleBot > :start', async t => {
+  // :status 초기
+  t.deepEqual(await bot01.status(), {
+    progress: 0,
+    process: ProcessStatus.yet,
+  })
+  t.deepEqual(await bot01_1.status(), {
+    progress: 0,
+    process: ProcessStatus.yet,
+  })
+  // :progress
   let cc = 0
   bot01.on(':progress', count => {
-    t.is(count, cc + 10)
+    if(count !== 125) {
+      t.is(count, cc + 10)
+    }
     cc = count
   })
-  let boughtCount = 0
-  bot01.on<Mock>(':bought', mock => {
-    t.is(mock.history.length, boughtCount++)
+  let ccc = 0
+  bot01_1.on(':progress', count => {
+    if(count !== 125) {
+      t.is(count, ccc + 10)
+    }
+    ccc = count
   })
-  let soldCount = 0
-  bot01.on<Mock>(':sold', mock => {
-    t.is(mock.history.length, ++soldCount)
-    bMock = mock
+  // :started
+  let ss = false
+  bot01.on(':started', async () => {
+    ss = true
+    // ProcessStatus.doing
+    const status = await bot01.status()
+    t.is(status.process, ProcessStatus.doing)
+  })
+  let sss = false
+  bot01.on(':started', async () => {
+    sss = true
+    // ProcessStatus.doing
+    const status = await bot01_1.status()
+    t.is(status.process, ProcessStatus.doing)
+  })
+  // :stoped
+  let st = false
+  bot01.on(':stoped', async () => {
+    st = true
+    // ProcessStatus.done
+    const status = await bot01.status()
+    t.is(status.process, ProcessStatus.done)
+  })
+  let sst = false
+  bot01.on(':stoped', async () => {
+    sst = true
+    // ProcessStatus.done
+    const status = await bot01_1.status()
+    t.is(status.process, ProcessStatus.done)
   })
   let bMock: Mock
+  // :bought
+  let bc = 0
+  bot01.on<Mock>(':bought', mock => {
+    t.is(mock.history.length, bc++)
+  })
+  let bbc = 0
+  bot01_1.on<Mock>(':bought', mock => {
+    t.is(mock.history.length, bbc++)
+  })
+  // :sold
+  let sc = 0
+  bot01.on<Mock>(':sold', mock => {
+    t.is(mock.history.length, ++sc)
+    bMock = mock
+  })
+  let ssc = 0
+  bot01_1.on<Mock>(':sold', mock => {
+    t.is(mock.history.length, ++ssc)
+  })
   const mock = await bot01.start(Mock)
+  // ProcessStatus.done
+  t.is((await bot01.status()).process, ProcessStatus.done)
+  t.is((await bot01_1.status()).process, ProcessStatus.done)
+  // :progress
+  t.is(cc, 125)
+  t.is(ccc, 125)
+  // :started
+  t.true(ss)
+  t.true(sss)
+  // :stoped
+  t.true(st)
+  t.true(sst)
+  // :bought
+  t.is(bc, 18)
+  t.is(bbc, 18)
+  // :sold
+  t.is(sc, 18)
+  t.is(ssc, 18)
+  // mock
+  const mm = await bot01_1.mock<Mock>()
+  t.deepEqual(mock.history, mm.history)
+  t.is(mock.money, mm.money)
+  t.is(mock.bought, mm.bought)
   t.deepEqual(mock.history, bMock.history)
   t.is(mock.money, bMock.money)
   t.is(mock.bought, bMock.bought)
-  t.is(soldCount, 7)
-  t.is(boughtCount, 7)
-  t.is(mock.history.length, 7)
+  t.is(mock.history.length, 18)
   mock.printTotal()
 })

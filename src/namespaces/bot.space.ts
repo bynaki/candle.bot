@@ -36,6 +36,8 @@ import {
   Mock,
   CandleResponse,
   CandleBotConfig,
+  BotStatus,
+  ProcessStatus,
 } from '../candle.bot'
 import {
   last
@@ -43,17 +45,13 @@ import {
 import p from 'fourdollar.promisify'
 import * as cf from '../config'
 
-enum Working {
-  yet = 'yet',
-  doing = 'doing',
-  done = 'done',
-}
 
 type BotData = {
   config: CandleBotConfig
   crawlers: Array<BithumbCandleCrawler|BitfinexCandleCrawler>
   haveToStop: boolean
-  working: Working
+  status: BotStatus
+  mock: any
 }
 
 
@@ -147,7 +145,11 @@ export class CandleBotSpace extends LogSpace {
         }
       }),
       haveToStop: false,
-      working: Working.yet,
+      status: {
+        progress: 0,
+        process: ProcessStatus.yet,
+      },
+      mock: null,
     }
     const {crawlers} = this._botDatas[name]
     await Promise.all(crawlers.map(c => c.open()))
@@ -189,20 +191,19 @@ export class CandleBotSpace extends LogSpace {
       }
       return pp
     }))
-    let mock = null
     const process = this.processTemplate(config.processArg)
-    let count = 0
     const namespace = this.namespace.to(name)
-    botData.working = Working.doing
+    const status = botData.status
+    status.process = ProcessStatus.doing
     namespace.emit(':started')
     while(true) {
       const res = config.markets.reduce((res: CandleResponse, market, idx) => {
         res[market.id] = promised[idx]
         return res
       }, {})
-      mock = await process(this.namespace.to(name), res)
-      if(++count % config.progressInterval % 100 === 0) {
-        namespace.emit(':progress', count)
+      botData.mock = await process(namespace, res)
+      if(++status.progress % config.progressInterval % 100 === 0) {
+        namespace.emit(':progress', status.progress)
       }
       if(botData.haveToStop || 
         config.endTime && promised[0].mts + (config.timeFrame * 60 * 1000) >= config.endTime) {
@@ -210,38 +211,42 @@ export class CandleBotSpace extends LogSpace {
       }
       promised = await Promise.all(crawlers.map((c, i) => this._getCandle(c, promised[i])))
     }
-    botData.working = Working.done
+    if(status.progress % config.progressInterval % 100 !== 0) {
+      namespace.emit(':progress', status.progress)
+    }
+    status.process = ProcessStatus.done 
     namespace.emit(':stoped')
-    return mock
+    return botData.mock
   }
 
   @OnAckLevel01(':stop')
   async onStop(socket: Socket, name: string): Promise<string> {
     const botData = await this._validBotData(socket, name)
-    switch(botData.working) {
-      case Working.yet: {
+    const status = botData.status
+    switch(status.process) {
+      case ProcessStatus.yet: {
         throw Error('아직 start하지 않았다.')
       }
-      case Working.doing: {
+      case ProcessStatus.doing: {
         botData.haveToStop = true
         return 'ok'
       }
-      case Working.done: {
+      case ProcessStatus.done: {
         return 'done'
       }
     }
   }
 
-  @OnAckLevel01(':be.started')
-  async onStarted(socket: Socket, name: string): Promise<boolean> {
+  @OnAckLevel01(':status')
+  async onStatus(socket: Socket, name: string): Promise<BotStatus> {
     const botData = await this._validBotData(socket, name)
-    return botData.working === Working.doing
+    return botData.status
   }
 
-  @OnAckLevel01(':be.stoped')
-  async onStoped(socket: Socket, name: string): Promise<boolean> {
+  @OnAckLevel01(':mock')
+  async onMock<M>(socket: Socket, name: string): Promise<M> {
     const botData = await this._validBotData(socket, name)
-    return botData.working === Working.done
+    return botData.mock
   }
 
   @OnWrapped('*')

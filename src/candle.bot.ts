@@ -130,11 +130,22 @@ export interface CandleBotConfig {
   })[]
 }
 
-
 export type BotHost = {
   url: string
   version: string
   key: string
+}
+
+
+export interface BotStatus {
+  progress: number
+  process: ProcessStatus
+}
+
+export enum ProcessStatus {
+  yet = 'yet',
+  doing = 'doing',
+  done = 'done',
 }
 
 
@@ -268,5 +279,13 @@ export class CandleBot extends BaseBot {
 
   stop(): Promise<void> {
     return this._ack(':stop', this.name)
+  }
+
+  async status(): Promise<BotStatus> {
+    return this._ack(':status', this.name)
+  }
+
+  async mock<M>(): Promise<M> {
+    return this._ack(':mock', this.name)
   }
 }
