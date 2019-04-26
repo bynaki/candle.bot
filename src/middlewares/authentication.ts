@@ -15,7 +15,6 @@ import {
 //   './jwtconfig.base.json' : './jwtconfig.json'
 const cfgPath = './jwtconfig.json'
 const auth = new Authorizer(cfgPath)
-console.log(cfgPath)
 
 
 export function getToken(socket: Socket): string {

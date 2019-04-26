@@ -5,8 +5,6 @@
 import test from 'ava'
 import * as IO from 'socket.io'
 import { CandleBotSpace, ptBtoB } from '../src/namespaces'
-import p from 'fourdollar.promisify'
-import { ErrorWithStatusCode } from '../src/errors';
 import {
   Authorizer,
 } from 'bynaki.auth'
@@ -19,6 +17,9 @@ import {
   BitfinexCC,
   BithumbCC,
   ProcessStatus,
+  CandleData,
+  BithumbCandleData,
+  ErrorWithStatusCode,
 } from '../src'
 
 
@@ -163,7 +164,7 @@ test.serial('CandleMasterBot > :get.bot > error: \'none\' 이름의 Bot이 존�
   }
 })
 
-test.only('CandleBot > :start', async t => {
+test('CandleBot > :start', async t => {
   // :status 초기
   t.deepEqual(await bot01.status(), {
     progress: 0,

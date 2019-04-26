@@ -13,13 +13,47 @@ import {
   ceil,
 } from 'lodash'
 import * as dayjs from 'dayjs'
-import { hostname } from 'os';
-import { on } from 'cluster';
+
 
 
 export type CandleResponse = {
   [id: string]: CandleData|BithumbCandleData
 }
+
+export interface CandleBotConfig {
+  timeFrame: TimeFrame
+  startTime?: number
+  endTime?: number
+  progressInterval?: number
+  processArg?: any
+  markets: ({
+    id: string
+    name: Market.Bithumb
+    currency: BithumbCC
+  }|{
+    id: string
+    name: Market.Bitfinex
+    currency: BitfinexCC
+  })[]
+}
+
+export type BotHost = {
+  url: string
+  version: string
+  key: string
+}
+
+export interface BotStatus {
+  progress: number
+  process: ProcessStatus
+}
+
+export enum ProcessStatus {
+  yet = 'yet',
+  doing = 'doing',
+  done = 'done',
+}
+
 
 
 export class Mock {
@@ -110,42 +144,6 @@ export class Mock {
     this.print()
     this.printTotal()
   }
-}
-
-
-export interface CandleBotConfig {
-  timeFrame: TimeFrame
-  startTime?: number
-  endTime?: number
-  progressInterval?: number
-  processArg?: any
-  markets: ({
-    id: string
-    name: Market.Bithumb
-    currency: BithumbCC
-  }|{
-    id: string
-    name: Market.Bitfinex
-    currency: BitfinexCC
-  })[]
-}
-
-export type BotHost = {
-  url: string
-  version: string
-  key: string
-}
-
-
-export interface BotStatus {
-  progress: number
-  process: ProcessStatus
-}
-
-export enum ProcessStatus {
-  yet = 'yet',
-  doing = 'doing',
-  done = 'done',
 }
 
 
