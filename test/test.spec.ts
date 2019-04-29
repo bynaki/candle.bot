@@ -37,6 +37,8 @@ const master = new CandleMasterBot({
 let bot01: CandleBot
 let bot01_1: CandleBot
 
+
+
 test.before(async () => {
   await master.open()
   bot01 = await master.newBot('bot01', {
