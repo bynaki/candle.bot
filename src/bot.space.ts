@@ -9,14 +9,14 @@ import {
   ErrorNotFound,
   ErrorBadRequest,
   ErrorWithStatusCode
-} from '../errors'
+} from './errors'
 import {
   OnWrapped,
   grantPermission,
-} from '../wrappers'
+} from './wrappers'
 import {
   decodeToken,
-} from '../middlewares/authentication'
+} from './middlewares/authentication'
 import {
   LogSpace,
 } from './log.space'
@@ -33,17 +33,12 @@ import {
   ICandleCrawlerClient,
 } from 'cryptocurrency-crawler.client'
 import {
-  Mock,
   CandleResponse,
   CandleBotConfig,
   BotStatus,
   ProcessStatus,
-} from '../candle.bot'
-import {
-  last
-} from 'lodash'
+} from './candle.bot'
 import p from 'fourdollar.promisify'
-import * as cf from '../config'
 
 
 type BotData = {
@@ -55,26 +50,6 @@ type BotData = {
 }
 
 
-export function ptBtoB(money: number) {
-  const mock = new Mock(money)
-  const history: {bitfinex: CandleData, bithumb: CandleData}[] = []
-  return async (self: Namespace, res: CandleResponse): Promise<Mock> => {
-    const bitfinex = res['bitfinex']
-    const bithumb = res['bithumb']
-    if(mock.bought) {
-      mock.sell(bithumb)
-      self.emit(':sold', mock)
-    } else if(history.length !== 0 
-      && bitfinex.close > last(history).bitfinex.close
-      && bithumb.close <= last(history).bithumb.close) {
-      mock.buy(bithumb)
-      self.emit(':bought', mock)
-    }
-    history.push({bitfinex, bithumb})
-    return mock
-  }
-}
-
 const OnAckLevel01 = OnWrapped.next(grantPermission('level01')).on()
 const OnLevel01 = On.next(grantPermission('level01')).on()
 
@@ -84,10 +59,12 @@ const OnLevel01 = On.next(grantPermission('level01')).on()
 })
 export class CandleBotSpace extends LogSpace {
   private _botDatas: {[index: string]: BotData} = {}
+  private _crawlHost: CrawlHost
 
-  constructor(namespace: Namespace
+  constructor(namespace: Namespace, crawlHost: CrawlHost
     , public readonly processTemplate: (...args: any[]) => (self: Namespace, res: CandleResponse) => Promise<any>) {
     super(namespace)
+    this._crawlHost = Object.assign({}, crawlHost)
   }
 
   @OnAckLevel01(':ids')
@@ -126,7 +103,7 @@ export class CandleBotSpace extends LogSpace {
     config = Object.assign({progressInterval: 100}, config)
     const key = socket['token']
     const {timeFrame, markets} = config
-    const host: CrawlHost = Object.assign({}, cf.crawlerHost, {key})
+    const host: CrawlHost = Object.assign({}, this._crawlHost, {key})
     this._botDatas[name] = {
       config,
       crawlers: markets.map(market => {
@@ -266,7 +243,6 @@ export class CandleBotSpace extends LogSpace {
     }
     const candle = await crawler.crawl((pre as any).realPre || pre)
     if(candle.mts !== pre.mts + crawler.timeFrame * 60 * 1000) {
-      // console.log('candle.mts: ', candle.mts,  'pre.mts: ', pre.mts)
       switch(crawler.spaceName) {
         case 'bithumb': {
           return {

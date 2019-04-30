@@ -1,5 +1,5 @@
 export * from './candle.bot'
-export * from './namespaces/bot.space'
+export * from './bot.space'
 export * from './errors'
 export {
   TimeFrame,
@@ -9,3 +9,6 @@ export {
   CandleData,
   BithumbCandleData,
 } from 'cryptocurrency-crawler.client'
+export {
+  Namespace,
+} from 'socket.io'

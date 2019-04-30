@@ -1,0 +1,7 @@
+{
+  "crawlHost": {
+    "url": "http://crawlhost.com",
+    "version": "test",
+    "resCount": 100
+  }
+}

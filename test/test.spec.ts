@@ -4,23 +4,56 @@
 
 import test from 'ava'
 import * as IO from 'socket.io'
-import { CandleBotSpace, ptBtoB } from '../src/namespaces'
+import {
+  CandleBotSpace,
+} from '../src/bot.space'
 import {
   Authorizer,
 } from 'bynaki.auth'
 import {
   CandleBot,
   CandleMasterBot,
-  Mock,
   TimeFrame,
   Market,
   BitfinexCC,
   BithumbCC,
   ProcessStatus,
   CandleData,
-  BithumbCandleData,
   ErrorWithStatusCode,
+  Namespace,
+  CandleResponse,
 } from '../src'
+import {
+  TestMock,
+} from '../src/mocks.ts'
+import {
+  last,
+} from 'lodash'
+import {
+  getConfig,
+} from '../src/utils'
+
+
+
+export function ptBtoB(money: number) {
+  const mock = new TestMock(money)
+  const history: {bitfinex: CandleData, bithumb: CandleData}[] = []
+  return async (self: Namespace, res: CandleResponse): Promise<TestMock> => {
+    const bitfinex = res['bitfinex']
+    const bithumb = res['bithumb']
+    if(mock.bought) {
+      mock.sell(bithumb)
+      self.emit(':sold', mock)
+    } else if(history.length !== 0 
+      && bitfinex.close > last(history).bitfinex.close
+      && bithumb.close <= last(history).bithumb.close) {
+      mock.buy(bithumb)
+      self.emit(':bought', mock)
+    }
+    history.push({bitfinex, bithumb})
+    return mock
+  }
+}
 
 
 const io = IO(4001, {
@@ -28,7 +61,8 @@ const io = IO(4001, {
 })
 const auth = new Authorizer('./jwtconfig.json')
 const key = auth.sign({user: 'naki', permissions: ['level01']})
-const botSpace = new CandleBotSpace(io.of('candlebot'), ptBtoB)
+const cf = getConfig('./config.json')
+const botSpace = new CandleBotSpace(io.of('candlebot'), cf.crawlHost, ptBtoB)
 const master = new CandleMasterBot({
   url: 'http://localhost:4001/candlebot',
   version: 'v1',
@@ -221,27 +255,27 @@ test('CandleBot > :start', async t => {
     const status = await bot01_1.status()
     t.is(status.process, ProcessStatus.done)
   })
-  let bMock: Mock
+  let bMock: TestMock
   // :bought
   let bc = 0
-  bot01.on<Mock>(':bought', mock => {
+  bot01.on<TestMock>(':bought', mock => {
     t.is(mock.history.length, bc++)
   })
   let bbc = 0
-  bot01_1.on<Mock>(':bought', mock => {
+  bot01_1.on<TestMock>(':bought', mock => {
     t.is(mock.history.length, bbc++)
   })
   // :sold
   let sc = 0
-  bot01.on<Mock>(':sold', mock => {
+  bot01.on<TestMock>(':sold', mock => {
     t.is(mock.history.length, ++sc)
     bMock = mock
   })
   let ssc = 0
-  bot01_1.on<Mock>(':sold', mock => {
+  bot01_1.on<TestMock>(':sold', mock => {
     t.is(mock.history.length, ++ssc)
   })
-  const mock = await bot01.start(Mock)
+  const mock = await bot01.start(TestMock)
   // ProcessStatus.done
   t.is((await bot01.status()).process, ProcessStatus.done)
   t.is((await bot01_1.status()).process, ProcessStatus.done)
@@ -261,7 +295,7 @@ test('CandleBot > :start', async t => {
   t.is(sc, 18)
   t.is(ssc, 18)
   // mock
-  const mm = await bot01_1.mock<Mock>()
+  const mm = await bot01_1.mock<TestMock>()
   t.deepEqual(mock.history, mm.history)
   t.is(mock.money, mm.money)
   t.is(mock.bought, mm.bought)
