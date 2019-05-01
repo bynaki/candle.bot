@@ -25,7 +25,7 @@ import {
 } from '../src'
 import {
   TestMock,
-} from '../src/mocks.ts'
+} from '../src/mocks'
 import {
   last,
 } from 'lodash'

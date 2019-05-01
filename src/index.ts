@@ -8,6 +8,7 @@ export {
   BithumbCC,
   CandleData,
   BithumbCandleData,
+  CrawlHost,
 } from 'cryptocurrency-crawler.client'
 export {
   Namespace,
