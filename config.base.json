@@ -3,5 +3,9 @@
     "url": "http://crawlhost.com",
     "version": "test",
     "resCount": 100
+  },
+  "bithumb": {
+    "connectKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "secretKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   }
 }

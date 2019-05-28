@@ -27,6 +27,10 @@ export function sendingErrorData(err: ErrorWithStatusCode): {
 
 export function getConfig(path: string): {
   crawlHost: CrawlHost
+  bithumb: {
+    connectKey: string
+    secretKey: string
+  }
 } {
   return JSON.parse(readFileSync(path).toString())
 }

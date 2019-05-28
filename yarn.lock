@@ -1191,6 +1191,14 @@ aws4@^1.8.0:
   resolved "https://registry.yarnpkg.com/aws4/-/aws4-1.8.0.tgz#f0e003d9ca9e7f59c7a508945d7b2ef9a04a542f"
   integrity sha512-ReZxvNHIOv88FlT7rxcXIIC0fPt4KZqZbOlivyWtXLt8ESx84zd3kMC6iK5jVeS2qt+g7ftS7ye4fi06X5rtRQ==
 
+axios@^0.18.0:
+  version "0.18.0"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-0.18.0.tgz#32d53e4851efdc0a11993b6cd000789d70c05102"
+  integrity sha1-MtU+SFHv3AoRmTts0AB4nXDAUQI=
+  dependencies:
+    follow-redirects "^1.3.0"
+    is-buffer "^1.1.5"
+
 babel-plugin-espower@^3.0.1:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/babel-plugin-espower/-/babel-plugin-espower-3.0.1.tgz#180db17126f88e754105b8b5216d21e520a6bd4e"
@@ -2021,6 +2029,16 @@ cryptocurrency-crawler.client@^0.1.3:
     fourdollar.promisify "^1.0.6"
     socket.io-client "^2.2.0"
 
+cryptocurrency.api@^0.1.1:
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/cryptocurrency.api/-/cryptocurrency.api-0.1.1.tgz#371addee4df5edf250cfd6188301da9092ad3073"
+  integrity sha512-H/WxzmXaz6/ZOYBohzEk26n8REgWuoo5wdcVL29OYYi5hdMx4L59m1HF+/wlHUy68Ii5cheCYn7z/8hhi38iOQ==
+  dependencies:
+    axios "^0.18.0"
+    fourdollar.isfloat "^1.0.1"
+    fourdollar.isinteger "^1.0.4"
+    fourdollar.tostringquery "^1.1.0"
+
 css-color-names@0.0.4, css-color-names@^0.0.4:
   version "0.0.4"
   resolved "https://registry.yarnpkg.com/css-color-names/-/css-color-names-0.0.4.tgz#808adc2e79cf84738069b646cb20ec27beb629e0"
@@ -2252,6 +2270,13 @@ debug@2.6.9, debug@^2.1.2, debug@^2.2.0, debug@^2.3.3:
   integrity sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==
   dependencies:
     ms "2.0.0"
+
+debug@^3.2.6:
+  version "3.2.6"
+  resolved "https://registry.yarnpkg.com/debug/-/debug-3.2.6.tgz#e83d17de16d8a7efb7717edbe5fb10135eee629b"
+  integrity sha512-mel+jf7nrtEl5Pn1Qx46zARXKDpBbvzezse7p7LqINmdoIk8PYP5SySaxEmYv6TZ0JyEKA1hsCId6DIhgITtWQ==
+  dependencies:
+    ms "^2.1.1"
 
 debug@^4.1.0, debug@^4.1.1, debug@~4.1.0:
   version "4.1.1"
@@ -2867,6 +2892,13 @@ find-up@^3.0.0:
   dependencies:
     locate-path "^3.0.0"
 
+follow-redirects@^1.3.0:
+  version "1.7.0"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.7.0.tgz#489ebc198dc0e7f64167bd23b03c4c19b5784c76"
+  integrity sha512-m/pZQy4Gj287eNy94nivy5wchN3Kp+Q5WgUPNy5lJSZ3sgkVKSYV/ZChMAQVIgx1SqfZ2zBZtPA2YlXIWxxJOQ==
+  dependencies:
+    debug "^3.2.6"
+
 for-in@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/for-in/-/for-in-1.0.2.tgz#81068d295a8142ec0ac726c6e2200c30fb6d5e80"
@@ -2899,6 +2931,16 @@ fourdollar.filewriter@^1.0.2:
     fs-extra "^6.0.1"
     rotating-file-stream "^1.3.4"
 
+fourdollar.isfloat@^1.0.1:
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/fourdollar.isfloat/-/fourdollar.isfloat-1.0.1.tgz#0ea18df948db505b60a2bb9b9e5da84c6f86cfd5"
+  integrity sha512-uZcjNj9r0IffCLaPJAC19/E9bCYMZ1xftvm2of5g3QoTQv68y2Wpr96VAdt3SUUiX013UFoDuyn8dL59vmuA3A==
+
+fourdollar.isinteger@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/fourdollar.isinteger/-/fourdollar.isinteger-1.0.4.tgz#6d884c10406e2e586e8a77ba7875ec8354899149"
+  integrity sha512-Kwt4vkNQUClZ09piVoLE25I7nGlSoIslXuhN5MbNi+ivYQJ3VO+mqe9NZtH+Z9qwFuyTsN2RUeiN3TJn8BegFg==
+
 fourdollar.logger@^1.0.4:
   version "1.0.4"
   resolved "https://registry.yarnpkg.com/fourdollar.logger/-/fourdollar.logger-1.0.4.tgz#b1f643c4037ab13cdf8012de2e6de21913b86bb5"
@@ -2910,6 +2952,11 @@ fourdollar.promisify@^1.0.6:
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/fourdollar.promisify/-/fourdollar.promisify-1.0.6.tgz#8b92d44973aa438a57a3751d026ae88756b50257"
   integrity sha512-7aHLAbt+VX7sUuTGKvSTCPO6Apnd8dj3Q/ynrrDFaT0tJ+3joIb9815rphe0AWInfGd4c0LLZAJyzv9dRbnF+w==
+
+fourdollar.tostringquery@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/fourdollar.tostringquery/-/fourdollar.tostringquery-1.1.0.tgz#1d44b61f9937691532823ba3dcdc7a16ca0d7565"
+  integrity sha512-WBtrsnapEFhoN+NTTdfUyuthYp5TrKijLr+W3IWu2qdzNIALsiI/hWM98NIUC90Llv4+wVF4eryU2mkcvlD0hQ==
 
 fragment-cache@^0.2.1:
   version "0.2.1"
