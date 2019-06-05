@@ -104,6 +104,7 @@ export class CandleBotSpace extends LogSpace {
     const key = socket['token']
     const {timeFrame, markets} = config
     const host: CrawlHost = Object.assign({}, this._crawlHost, {key})
+    console.log(host)
     this._botDatas[name] = {
       config,
       crawlers: markets.map(market => {

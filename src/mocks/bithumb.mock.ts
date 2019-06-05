@@ -12,68 +12,117 @@ import {
 } from 'lodash'
 import isInteger from 'fourdollar.isinteger'
 import isFloat from 'fourdollar.isfloat'
+import {
+  CandleData,
+} from '../interface'
+
+
+
+let api: Bithumb
+let balances: IBalanceInfoType[] = []
+let orders: IOrdersInfoType[] = []
+let lastMts: number
 
 
 
 export class BithumbMock {
-  private _bithumb: Bithumb
-  private _balances: IBalanceInfoType[] = []
-  private _orders: IOrdersInfoType[] = []
-  private _krw: number
-
-  constructor(krw: number, keys: {
+  static async init(krw: number, keys: {
     connectKey: string
     secretKey: string
   }) {
-    this._bithumb = new Bithumb(keys)
-    this._krw = krw
+    balances = []
+    orders = []
+    if(!api) {
+      api = new Bithumb(keys)
+    }
+    const res = await api.getBalanceInfo('ALL')
+    if(res.status !== '0000') {
+      throw Error(`status: ${res.status}, ${res['message']}`)
+    }
+    balances.push(...res.transType().data)
+    balances.forEach(b => {
+      if(b.currency === 'KRW') {
+        b.total = krw
+        b.available = krw
+        b.in_use = 0
+      } else {
+        b.total = 0
+        b.available = 0
+        b.in_use = 0
+      }
+    })
   }
 
-  private async _init() {
-    if(this._balances.length === 0) {
-      const res = await this._bithumb.getBalanceInfo('ALL')
-      if(res.status === '0000') {
-        this._balances = res.transType().data
-        this._balances.forEach(b => {
-          if(b.currency === 'KRW') {
-            b.total = this._krw
-            b.available = this._krw
-            b.in_use = 0
-          } else {
-            b.total = 0
-            b.available = 0
-            b.in_use = 0
-          }
-        })
-      }
-    }
+  constructor() {
   }
 
   async getBalanceInfo(currency?: string): Promise<IBalanceInfoResponse> {
-    await this._init()
-    const res = await this._bithumb.getBalanceInfo(currency)
-    if(res.status !== '0000') {
-      return res
+    currency = currency || 'BTC'
+    const res = {
+      status: '0000',
+      data: balances.filter(b => currency === 'ALL' || b.currency === 'KRW' || b.currency === currency)
+      .map(b => {
+        return {
+          currency: b.currency,
+          available: b.available.toString(),
+          in_use: b.in_use.toString(),
+          total: b.total.toString(),
+          xcoin_last: null,
+        }
+      })
     }
-    res.data = res.data.map(b => {
-      const v = this._balances.find(bb => bb.currency === b.currency)
-      b.available = v.available.toString()
-      b.in_use = v.in_use.toString()
-      b.total = v.total.toString()
-      v.xcoin_last = b.xcoin_last
-      return b
-    })
-    return res
+    return this._bindTransType(res)
   }
 
   async place(orderCurrency: string, paymentCurrency: string, params: IPlaceParams)
   : Promise<ITradeResponse> {
-    const now = new Date().getTime()
+    if(!lastMts) {
+      throw Error('한번도 process하지 않았다.')
+    }
+    if(paymentCurrency !== 'KRW') {
+      throw Error('paymentCurrency은 KRW만 지원한다.')
+    }
+    if(params.type === 'bid') {
+      const inUse = params.price * params.units
+      const krw = balances.find(b => b.currency === 'KRW')
+      if(krw.available < inUse) {
+        return {
+          status: '5600',
+          message: 'xxxxxxxxxxxxxxxxxxxxx',
+        } as any
+      }
+      krw.available -= inUse
+      krw.in_use += inUse
+    } else if(params.type === 'ask') {
+      const bal = balances.find(b => b.currency === orderCurrency)
+      const inUse = params.price * params.units
+      if(bal.available < inUse) {
+        return {
+          status: '5600',
+          message: 'xxxxxxxxxxxxxxx',
+        } as any
+      }
+      bal.available -= inUse
+      bal.in_use += inUse
+    } else {
+      return {
+        status: '5500',
+        message: 'Invalid Parameter',
+      } as any
+    }
+    let id = lastMts
+    const f = (o: IOrdersInfoType) => {
+      if(o.order_id === id) {
+        id += 1
+        orders.forEach(f)
+      }
+    }
+    orders.forEach(f)
     const order: IOrdersInfoType = {
-      order_id: now,
+      order_id: id,
       order_currency: orderCurrency,
       payment_currency: paymentCurrency,
-      order_date: now,
+      order_date: id,
       type: params.type,
       status: 'placed',
       units: params.units,
@@ -83,12 +132,46 @@ export class BithumbMock {
       total: null,
       date_completed: null,
     }
-    this._orders.push(order)
+    orders.push(order)
     return this._bindTransType({
       status: '0000',
       order_id: order.order_id.toString(),
       data: []
     })
+  }
+
+  process(currency: string, candle: CandleData) {
+    const krw = balances.find(b => b.currency === 'KRW')
+    orders.filter(o => o.date_completed && o.order_currency === currency)
+    .forEach(o => {
+      const coin = balances.find(b => b.currency === currency)
+      if(o.type === 'bid') {
+        if(o.price <= candle.close) {
+          o.units_remaining = 0
+          o.total = o.price * o.units
+          o.date_completed = candle.mts
+          coin.total += o.units
+          coin.available = coin.total - coin.in_use
+          krw.total -= o.total
+          krw.in_use -= o.total
+          krw.available = krw.total - krw.in_use
+        }
+      } else if(o.type === 'ask') {
+        if(o.price >= candle.close) {
+          o.units_remaining = 0
+          o.total = o.price * o.units
+          o.date_completed = candle.mts
+          coin.total -= o.units
+          coin.in_use -= o.units
+          coin.available = coin.total - coin.in_use
+          krw.total += o.total
+          krw.available = krw.total - krw.in_use
+        }
+      } else {
+        throw Error("'bid'나 'ask' 둘중 하나여야 한다.")
+      }
+    })
+    lastMts = candle.mts
   }
 
   private _bindTransType(res: any) {

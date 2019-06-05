@@ -61,6 +61,7 @@ const io = IO(4001, {
 })
 const auth = new Authorizer('./jwtconfig.json')
 const key = auth.sign({user: 'naki', permissions: ['level01']})
+console.log('key: ', key)
 const cf = getConfig('./config.json')
 const botSpace = new CandleBotSpace(io.of('candlebot'), cf.crawlHost, ptBtoB)
 const master = new CandleMasterBot({

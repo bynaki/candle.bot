@@ -11,7 +11,7 @@
       "program": "${workspaceRoot}/node_modules/ava/profile.js",
       "args": [
         // "${file}",
-        "${workspaceRoot}/dist.test/test/test.spec.js",
+        "${workspaceRoot}/dist.test/test/bithumb.mock.spec.js",
       ],
       "skipFiles": [
         "<node_internals>/**/*.js"
