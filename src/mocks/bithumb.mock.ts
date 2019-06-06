@@ -3,6 +3,7 @@ import {
   IBithumbBalanceInfoType as IBalanceInfoType,
   IBithumbBalanceInfoResponse as IBalanceInfoResponse,
   IBithumbOrdersInfoType as IOrdersInfoType,
+  IBithumbOrdersInfoParams as IOrdersInfoParams,
   IBithumbOrdersInfoResponse as IOrdersInfoResponse,
   IBithumbPlaceParams as IPlaceParams,
   IBithumbTradeResponse as ITradeResponse,
@@ -74,6 +75,37 @@ export class BithumbMock {
     return this._bindTransType(res)
   }
 
+  async getOrdersInfo(currency: string, params?: IOrdersInfoParams)
+  : Promise<IOrdersInfoResponse> {
+    if(params.order_id || params.type) {
+      if(!(params.order_id && params.type)) {
+        return {
+          status: '5500',
+          message: 'Invalid Parameter'
+        } as any
+      }
+    }
+    const filtered = orders.filter(o => currency === 'ALL' || o.order_currency === currency)
+    .filter(o => {
+      if(params.order_id) {
+        return o.order_id === params.order_id && o.type === params.type
+      } else {
+        return true
+      }
+    }).filter(o => {
+      if(params.after) {
+        return Math.round(o.order_date / 1000) >= params.after
+      } else {
+        return true
+      }
+    })
+    const count = params.count || 100
+    return this._bindTransType({
+      status: '0000',
+      data: filtered.slice(0, count)
+    })
+  }
+
   async place(orderCurrency: string, paymentCurrency: string, params: IPlaceParams)
   : Promise<ITradeResponse> {
     if(!lastMts) {
@@ -110,7 +142,7 @@ export class BithumbMock {
         message: 'Invalid Parameter',
       } as any
     }
-    let id = lastMts
+    let id = lastMts * 1000
     const f = (o: IOrdersInfoType) => {
       if(o.order_id === id) {
         id += 1
@@ -132,7 +164,7 @@ export class BithumbMock {
       total: null,
       date_completed: null,
     }
-    orders.push(order)
+    orders.unshift(order)
     return this._bindTransType({
       status: '0000',
       order_id: order.order_id.toString(),
