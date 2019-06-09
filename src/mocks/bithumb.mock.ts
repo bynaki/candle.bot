@@ -22,9 +22,31 @@ import {
 let api: Bithumb
 let balances: IBalanceInfoType[] = []
 let orders: IOrdersInfoType[] = []
-let lastMts: number
+let lastCandles: {
+  [currency: string]: CandleData
+} = {}
 
 
+function newOrderId() {
+  const keys = Object.keys(lastCandles)
+  if(keys.length === 0) {
+    throw Error('아직 process 하지 않은것 같다.')
+  }
+  let id = lastCandles[keys[0]].mts * 1000
+  const f = (o: IOrdersInfoType) => {
+    if(o.order_id === id) {
+      id += 1
+      orders.forEach(f)
+    }
+  }
+  orders.forEach(f)
+  return id
+}
+
+let contId = 0
+function newContId() {
+  return ++contId
+}
 
 export class BithumbMock {
   static async init(krw: number, keys: {
@@ -75,7 +97,7 @@ export class BithumbMock {
     return this._bindTransType(res)
   }
 
-  async getOrdersInfo(currency: string, params?: IOrdersInfoParams)
+  async getOrdersInfo(currency: string, params: IOrdersInfoParams = {})
   : Promise<IOrdersInfoResponse> {
     if(params.order_id || params.type) {
       if(!(params.order_id && params.type)) {
@@ -102,14 +124,17 @@ export class BithumbMock {
     const count = params.count || 100
     return this._bindTransType({
       status: '0000',
-      data: filtered.slice(0, count)
+      data: filtered.slice(0, count).map(f => toString(f)).map(f => {
+        f['order_date'] = Number.parseInt(f['order_date'])
+        return f
+      }),
     })
   }
 
   async place(orderCurrency: string, paymentCurrency: string, params: IPlaceParams)
   : Promise<ITradeResponse> {
-    if(!lastMts) {
-      throw Error('한번도 process하지 않았다.')
+    if(!lastCandles[orderCurrency]) {
+      throw Error(`'${orderCurrency}' process하지 않았다.`)
     }
     if(paymentCurrency !== 'KRW') {
       throw Error('paymentCurrency은 KRW만 지원한다.')
@@ -142,14 +167,7 @@ export class BithumbMock {
         message: 'Invalid Parameter',
       } as any
     }
-    let id = lastMts * 1000
-    const f = (o: IOrdersInfoType) => {
-      if(o.order_id === id) {
-        id += 1
-        orders.forEach(f)
-      }
-    }
-    orders.forEach(f)
+    const id = newOrderId()
     const order: IOrdersInfoType = {
       order_id: id,
       order_currency: orderCurrency,
@@ -158,7 +176,7 @@ export class BithumbMock {
       type: params.type,
       status: 'placed',
       units: params.units,
-      units_remaining: params.units,
+      units_remaining: null,
       price: params.price,
       fee: null,
       total: null,
@@ -172,13 +190,115 @@ export class BithumbMock {
     })
   }
 
-  process(currency: string, candle: CandleData) {
+  async marketBuy(currency: string, units: number)
+  : Promise<ITradeResponse> {
+    const candle = lastCandles[currency]
+    if(!candle) {
+      throw Error(`'${currency}' process하지 않았다.`)
+    }
     const krw = balances.find(b => b.currency === 'KRW')
-    orders.filter(o => o.date_completed && o.order_currency === currency)
+    if(krw.available < (candle.close * units)) {
+      return {
+        status: '5600',
+        message: 'xxxxxxxxxxxxxxx',
+      } as any
+    }
+    krw.total -= candle.close * units
+    krw.available = krw.total - krw.in_use
+    const coin = balances.find(b => b.currency === currency)
+    coin.total += units
+    coin.available = coin.total - coin.in_use
+    const id = newOrderId()
+    const order: IOrdersInfoType = {
+      order_id: id,
+      order_currency: currency,
+      payment_currency: 'KRW',
+      order_date: id,
+      type: 'bid',
+      status: 'placed', // todo: 뭐라고 해야하나.
+      units: units,
+      units_remaining: 0,
+      price: candle.close,
+      fee: null,
+      total: candle.close * units,
+      date_completed: candle.mts,
+    }
+    orders.unshift(order)
+    return this._bindTransType({
+      status: '0000',
+      order_id: id.toString(),
+      data: [
+        {
+          cont_id: newContId().toString(),
+          units: units.toString(),
+          price: candle.close.toString(),
+          total: candle.close * units,
+          fee: null,
+        }
+      ]
+    })
+  }
+
+  async marketSell(currency: string, units: number)
+  : Promise<ITradeResponse> {
+    const candle = lastCandles[currency]
+    if(!candle) {
+      throw Error(`'${currency}' process하지 않았다.`)
+    }
+    const cc = balances.find(b => b.currency === currency)
+    if(cc.available < units) {
+      return {
+        status: '5600',
+        message: 'xxxxxxxxxxxxxxx',
+      } as any
+    }
+    cc.total -= units
+    cc.available = cc.total - cc.in_use
+    const krw = balances.find(b => b.currency === 'KRW')
+    krw.total += candle.close * units
+    krw.available = krw.total - krw.in_use
+    const id = newOrderId()
+    const order: IOrdersInfoType = {
+      order_id: id,
+      order_currency: currency,
+      payment_currency: 'KRW',
+      order_date: id,
+      type: 'ask',
+      status: 'placed', // 뭐라고 해야하나
+      units: units,
+      units_remaining: 0,
+      price: candle.close,
+      fee: null,
+      total: candle.close * units,
+      date_completed: candle.mts,
+    }
+    orders.unshift(order)
+    return this._bindTransType({
+      status: '0000',
+      order_id: id.toString(),
+      data: [
+        {
+          cont_id: newContId().toString(),
+          units: units.toString(),
+          price: candle.close.toString(),
+          total: candle.close * units,
+          fee: null,
+        }
+      ]
+    })
+  }
+
+  process(currency: string, candle: CandleData) {
+    if(Object.keys(lastCandles).some(c => lastCandles[c].mts !== candle.mts)) {
+      lastCandles = {}
+    }
+    lastCandles[currency] = candle
+    const krw = balances.find(b => b.currency === 'KRW')
+    orders.filter(o => !o.date_completed && o.order_currency === currency)
     .forEach(o => {
       const coin = balances.find(b => b.currency === currency)
       if(o.type === 'bid') {
-        if(o.price <= candle.close) {
+        if(o.price >= candle.close) {
           o.units_remaining = 0
           o.total = o.price * o.units
           o.date_completed = candle.mts
@@ -189,7 +309,7 @@ export class BithumbMock {
           krw.available = krw.total - krw.in_use
         }
       } else if(o.type === 'ask') {
-        if(o.price >= candle.close) {
+        if(o.price <= candle.close) {
           o.units_remaining = 0
           o.total = o.price * o.units
           o.date_completed = candle.mts
@@ -203,13 +323,13 @@ export class BithumbMock {
         throw Error("'bid'나 'ask' 둘중 하나여야 한다.")
       }
     })
-    lastMts = candle.mts
   }
 
   private _bindTransType(res: any) {
     res.transType = transType.bind(res)
     return res
   }
+
 }
 
 
@@ -239,4 +359,18 @@ function transType(data) {
     }
   }
   return cpData
+}
+
+function toString<T>(data: T) {
+  const dd = {}
+  Object.keys(data).forEach(key => {
+    if(data[key] === null || data[key] === undefined) {
+      dd[key] = data[key]
+    } else if(typeof data[key] === 'object') {
+      dd[key] = toString(data[key])
+    } else {
+      dd[key] = data[key].toString()
+    }
+  })
+  return dd
 }
