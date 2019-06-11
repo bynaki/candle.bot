@@ -49,7 +49,7 @@ test.serial('BithumbMock > getBalanceInfo(ALL)', async t => {
   t.is(krw.xcoin_last, null)
 })
 
-test.serial('BithumbMock > getBalanceInfo(ETC)', async t => {
+test.serial('BithumbMock > getBalanceInfo(BTC)', async t => {
   const mock = new BithumbMock()
   const res = await mock.getBalanceInfo()
   t.is(res.status, '0000')
@@ -61,11 +61,11 @@ test.serial('BithumbMock > getBalanceInfo(ETC)', async t => {
   t.is(krw.available, 1000000)
   t.is(krw.in_use, 0)
   t.is(krw.xcoin_last, null)
-  const etc = data.find(b => b.currency === 'BTC')
-  t.is(etc.currency, 'BTC')
-  t.is(etc.total, 0)
-  t.is(etc.available, 0)
-  t.is(etc.in_use, 0)
+  const btc = data.find(b => b.currency === 'BTC')
+  t.is(btc.currency, 'BTC')
+  t.is(btc.total, 0)
+  t.is(btc.available, 0)
+  t.is(btc.in_use, 0)
 })
 
 
@@ -83,7 +83,7 @@ test.serial('BithumbMock > place(): bid', async t => {
   t.is(res.transType().order_id, orderId)
   const bals = (await mock.getBalanceInfo()).transType().data
   const krw = bals.find(b => b.currency === 'KRW')
-  const etc = bals.find(b => b.currency === 'ETC')
+  const btc = bals.find(b => b.currency === 'BTC')
   t.is(krw.in_use, 4249000 * 0.1)
   t.is(krw.available, 1000000 - krw.in_use)
   t.is(krw.total, 1000000)
@@ -112,13 +112,13 @@ test.serial('BithumbMock > place(): bid transaction', async t => {
   process(7)
   const bals = (await mock.getBalanceInfo()).transType().data
   const krw = bals.find(b => b.currency === 'KRW')
-  const etc = bals.find(b => b.currency === 'BTC')
+  const btc = bals.find(b => b.currency === 'BTC')
   t.is(krw.total, 1000000 - (4249000 * 0.1))
   t.is(krw.available, krw.total)
   t.is(krw.in_use, 0)
-  t.is(etc.total, 0.1)
-  t.is(etc.available, 0.1)
-  t.is(etc.in_use, 0)
+  t.is(btc.total, 0.1)
+  t.is(btc.available, 0.1)
+  t.is(btc.in_use, 0)
   const resOrd = await mock.getOrdersInfo('BTC', {order_id: orderId, type: 'bid'})
   const ord = resOrd.transType().data[0]
   t.deepEqual(ord, {
@@ -133,7 +133,7 @@ test.serial('BithumbMock > place(): bid transaction', async t => {
     price: 4249000,
     fee: null,
     total: 4249000 * 0.1,
-    date_completed: 1551411300000,
+    date_completed: 1551411300000 * 1000,
   })
 })
 
@@ -150,7 +150,7 @@ test.serial('BithumbMock > place(): bid2', async t => {
   t.is(res.transType().order_id, orderId)
   const bals = (await mock.getBalanceInfo()).transType().data
   const krw = bals.find(b => b.currency === 'KRW')
-  const etc = bals.find(b => b.currency === 'ETC')
+  const btc = bals.find(b => b.currency === 'BTC')
   t.is(krw.in_use, 4247000 * 0.1)
   t.is(krw.available, 1000000 - (4249000 * 0.1) - krw.in_use)
   t.is(krw.total, 1000000 - (4249000 * 0.1))
@@ -179,13 +179,13 @@ test.serial('BithumbMock > place(): bid2 transaction', async t => {
   process(9)
   const bals = (await mock.getBalanceInfo()).transType().data
   const krw = bals.find(b => b.currency === 'KRW')
-  const etc = bals.find(b => b.currency === 'BTC')
+  const btc = bals.find(b => b.currency === 'BTC')
   t.is(krw.total, 1000000 - (4249000 * 0.1) - (4247000 * 0.1))
   t.is(krw.available, krw.total)
   t.is(krw.in_use, 0)
-  t.is(etc.total, 0.2)
-  t.is(etc.available, 0.2)
-  t.is(etc.in_use, 0)
+  t.is(btc.total, 0.2)
+  t.is(btc.available, 0.2)
+  t.is(btc.in_use, 0)
   const resOrd = await mock.getOrdersInfo('BTC', {order_id: orderId, type: 'bid'})
   const ord = resOrd.transType().data[0]
   t.deepEqual(ord, {
@@ -200,11 +200,75 @@ test.serial('BithumbMock > place(): bid2 transaction', async t => {
     price: 4247000,
     fee: null,
     total: 4247000 * 0.1,
-    date_completed: 1551411900000,
+    date_completed: 1551411900000 * 1000,
   })
 })
 
+test.serial('BithumbMock > place(): ask', async t => {
+  const mock = new BithumbMock()
+  const res = await mock.place('BTC', 'KRW', {
+    price: 4250000,
+    type: 'ask',
+    units: 0.1,
+  })
+  t.is(res.status, '0000')
+  orderId = sample[9].mts * 1000
+  t.is(res.transType().order_id, orderId)
+  const bals = (await mock.getBalanceInfo()).transType().data
+  const krw = bals.find(b => b.currency === 'KRW')
+  const btc = bals.find(b => b.currency === 'BTC')
+  t.is(btc.in_use, 0.1)
+  t.is(btc.available, 0.1)
+  t.is(btc.total, 0.2)
+  const resOrd = await mock.getOrdersInfo('BTC')
+  const ords = resOrd.transType().data
+  t.is(ords.length, 3)
+  const ord = resOrd.transType().data[0]
+  t.deepEqual(ord, {
+    order_id: orderId,
+    order_currency: 'BTC',
+    order_date: orderId,
+    payment_currency: 'KRW',
+    type: 'ask',
+    status: 'placed',
+    units: 0.1,
+    units_remaining: null,
+    price: 4250000,
+    fee: null,
+    total: null,
+    date_completed: null,
+  })
+})
 
+test.serial('BithumbMock > place(): ask transaction', async t => {
+  const mock = new BithumbMock()
+  process(11)
+  const bals = (await mock.getBalanceInfo()).transType().data
+  const krw = bals.find(b => b.currency === 'KRW')
+  const btc = bals.find(b => b.currency === 'BTC')
+  t.is(krw.total, 1000000 - (4249000 * 0.1) - (4247000 * 0.1) + (4250000 * 0.1))
+  t.is(krw.available, krw.total)
+  t.is(krw.in_use, 0)
+  t.is(btc.total, 0.1)
+  t.is(btc.available, 0.1)
+  t.is(btc.in_use, 0)
+  const resOrd = await mock.getOrdersInfo('BTC', {order_id: orderId, type: 'ask'})
+  const ord = resOrd.transType().data[0]
+  t.deepEqual(ord, {
+    order_id: orderId,
+    order_currency: 'BTC',
+    order_date: orderId,
+    payment_currency: 'KRW',
+    type: 'ask',
+    status: 'placed', // todo: placed가 아닐 텐데.
+    units: 0.1,
+    units_remaining: 0,
+    price: 4250000,
+    fee: null,
+    total: 4250000 * 0.1,
+    date_completed: 1551412500000 * 1000,
+  })
+})
 
 test.serial('BithumbMock > place() bid too much', async t => {
   const mock = new BithumbMock()

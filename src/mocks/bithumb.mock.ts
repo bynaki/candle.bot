@@ -152,15 +152,14 @@ export class BithumbMock {
       krw.in_use += inUse
     } else if(params.type === 'ask') {
       const bal = balances.find(b => b.currency === orderCurrency)
-      const inUse = params.price * params.units
-      if(bal.available < inUse) {
+      if(bal.available < params.units) {
         return {
           status: '5600',
           message: 'xxxxxxxxxxxxxxx',
         } as any
       }
-      bal.available -= inUse
-      bal.in_use += inUse
+      bal.available -= params.units
+      bal.in_use += params.units
     } else {
       return {
         status: '5500',
@@ -301,7 +300,7 @@ export class BithumbMock {
         if(o.price >= candle.close) {
           o.units_remaining = 0
           o.total = o.price * o.units
-          o.date_completed = candle.mts
+          o.date_completed = candle.mts * 1000
           coin.total += o.units
           coin.available = coin.total - coin.in_use
           krw.total -= o.total
@@ -312,7 +311,7 @@ export class BithumbMock {
         if(o.price <= candle.close) {
           o.units_remaining = 0
           o.total = o.price * o.units
-          o.date_completed = candle.mts
+          o.date_completed = candle.mts * 1000
           coin.total -= o.units
           coin.in_use -= o.units
           coin.available = coin.total - coin.in_use
