@@ -7,9 +7,13 @@ import {
   IBithumbOrdersInfoResponse as IOrdersInfoResponse,
   IBithumbPlaceParams as IPlaceParams,
   IBithumbTradeResponse as ITradeResponse,
+  IBithumbCancelParams as ICancelParams,
+  IBithumbCancelResponse as ICancelResponse,
+
 } from 'cryptocurrency.api'
 import {
   clone,
+  pullAt,
 } from 'lodash'
 import isInteger from 'fourdollar.isinteger'
 import isFloat from 'fourdollar.isfloat'
@@ -121,6 +125,12 @@ export class BithumbMock {
         return true
       }
     })
+    if(filtered.length === 0) {
+      return {
+        status: '5600',
+        message: '거래 진행중인 내역이 존재하지 않습니다.',
+      } as any
+    }
     const count = params.count || 100
     return this._bindTransType({
       status: '0000',
@@ -148,8 +158,8 @@ export class BithumbMock {
           message: 'xxxxxxxxxxxxxxxxxxxxx',
         } as any
       }
-      krw.available -= inUse
       krw.in_use += inUse
+      krw.available = krw.total - krw.in_use
     } else if(params.type === 'ask') {
       const bal = balances.find(b => b.currency === orderCurrency)
       if(bal.available < params.units) {
@@ -158,8 +168,8 @@ export class BithumbMock {
           message: 'xxxxxxxxxxxxxxx',
         } as any
       }
-      bal.available -= params.units
       bal.in_use += params.units
+      bal.available = bal.total - bal.in_use
     } else {
       return {
         status: '5500',
@@ -285,6 +295,35 @@ export class BithumbMock {
         }
       ]
     })
+  }
+
+  async cancel(currency: string, params: ICancelParams): Promise<ICancelResponse> {
+    const idx = orders.findIndex(o => {
+      return o.order_currency === currency && o.order_id === params.order_id && o.type === params.type
+    })
+    if(idx === -1 || orders[idx].date_completed) {
+      return {
+        status: '5600',
+        message: '매수건의 상태가 진행중이 아닙니다. 취소할 수 없습니다.',
+      } as any
+    } else {
+      const ord = orders[idx]
+      if(ord.type === 'bid') {
+        const bal = balances.find(b => b.currency === 'KRW')
+        bal.in_use -= ord.price * ord.units
+        bal.available = bal.total - bal.in_use
+      } else if(ord.type === 'ask') {
+        const bal = balances.find(b => b.currency === currency)
+        bal.in_use -= ord.units
+        bal.available = bal.total - bal.in_use
+      } else {
+        return { status: '5500', message: 'Invalid Parameter' } as any
+      }
+      pullAt(orders, idx)
+      return {
+        status: '0000',
+      }
+    }
   }
 
   process(currency: string, candle: CandleData) {

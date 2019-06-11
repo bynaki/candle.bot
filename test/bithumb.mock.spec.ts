@@ -12,6 +12,7 @@ import {
 import {
   Authorizer,
 } from 'bynaki.auth'
+import { Bithumb, IBithumbErrorResponse } from 'cryptocurrency.api';
 
 
 
@@ -280,11 +281,89 @@ test.serial('BithumbMock > place() bid too much', async t => {
   t.is(res.status,'5600')
 })
 
+test.serial('BithumbMock > cancel()', async t => {
+  const mock = new BithumbMock()
+  const krw = (await mock.getBalanceInfo('BTC')).transType().data.find(b => b.currency === 'KRW')
+  const plRes = (await mock.place('BTC', 'KRW', {
+    price: 1,
+    type: 'bid',
+    units: 2,
+  })).transType()
+  const krw2 = (await mock.getBalanceInfo('BTC')).transType().data.find(b => b.currency === 'KRW')
+  t.is(krw2.in_use, krw.in_use + 2)
+  t.is(krw2.available, krw.available - 2)
+  const ordRes = await mock.getOrdersInfo('ALL')
+  t.is(ordRes.data.length, 4)
+  const ordRes2 = await mock.getOrdersInfo('BTC', {
+    order_id: plRes.order_id,
+    type: 'bid',
+  })
+  t.is(ordRes2.status, '0000')
+  t.is(ordRes2.data.length, 1)
+  const cclRes = await mock.cancel('BTC', {
+    order_id: plRes.order_id,
+    type: 'bid',
+  })
+  t.is(cclRes.status, '0000')
+  const krw3 = (await mock.getBalanceInfo('BTC')).transType().data.find(b => b.currency === 'KRW')
+  t.deepEqual(krw3, krw)
+  const ordRes3 = await mock.getOrdersInfo('ALL')
+  t.is(ordRes3.data.length, 3)
+  const ordRes4 = await mock.getOrdersInfo('BTC', {
+    order_id: plRes.order_id,
+    type: 'bid',
+  })
+  t.is(ordRes4.status, '5600')
+})
+
+test.serial.skip('BithumbMock > marketBuy()', async t => {
+  const mock = new BithumbMock()
+  const res = await mock.place('BTC', 'KRW', {
+    price: 4250000,
+    type: 'ask',
+    units: 0.1,
+  })
+  t.is(res.status, '0000')
+  orderId = sample[9].mts * 1000
+  t.is(res.transType().order_id, orderId)
+  const bals = (await mock.getBalanceInfo()).transType().data
+  const krw = bals.find(b => b.currency === 'KRW')
+  const btc = bals.find(b => b.currency === 'BTC')
+  t.is(btc.in_use, 0.1)
+  t.is(btc.available, 0.1)
+  t.is(btc.total, 0.2)
+  const resOrd = await mock.getOrdersInfo('BTC')
+  const ords = resOrd.transType().data
+  t.is(ords.length, 3)
+  const ord = resOrd.transType().data[0]
+  t.deepEqual(ord, {
+    order_id: orderId,
+    order_currency: 'BTC',
+    order_date: orderId,
+    payment_currency: 'KRW',
+    type: 'ask',
+    status: 'placed',
+    units: 0.1,
+    units_remaining: null,
+    price: 4250000,
+    fee: null,
+    total: null,
+    date_completed: null,
+  })
+})
+
 test.serial('BithumbMock > getOrdersInfo()', async t => {
   const mock = new BithumbMock()
   const res = await mock.getOrdersInfo('BTC')
   t.is(res.status, '0000')
   console.log(res)
+})
+
+test.serial('BithumbMock > getOrdersInfo(): error', async t => {
+  const mock = new BithumbMock()
+  const res: IBithumbErrorResponse = (await mock.getOrdersInfo('ETH')) as any
+  t.is(res.status, '5600')
+  t.is(res.message, '거래 진행중인 내역이 존재하지 않습니다.')
 })
 
 
