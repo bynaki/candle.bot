@@ -230,7 +230,7 @@ export class BithumbMock {
       price: candle.close,
       fee: null,
       total: candle.close * units,
-      date_completed: candle.mts,
+      date_completed: candle.mts * 1000,
     }
     orders.unshift(order)
     return this._bindTransType({
@@ -279,7 +279,7 @@ export class BithumbMock {
       price: candle.close,
       fee: null,
       total: candle.close * units,
-      date_completed: candle.mts,
+      date_completed: candle.mts * 1000,
     }
     orders.unshift(order)
     return this._bindTransType({
