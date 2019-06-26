@@ -46,7 +46,6 @@ type BotData = {
   crawlers: Array<BithumbCandleCrawler|BitfinexCandleCrawler>
   haveToStop: boolean
   status: BotStatus
-  mock: any
 }
 
 
@@ -62,7 +61,7 @@ export class CandleBotSpace extends LogSpace {
   private _crawlHost: CrawlHost
 
   constructor(namespace: Namespace, crawlHost: CrawlHost
-    , public readonly processTemplate: (...args: any[]) => (self: Namespace, res: CandleResponse) => Promise<any>) {
+    , public readonly processTemplate: (arg: any) => Promise<(self: Namespace, res: CandleResponse) => Promise<void>>) {
     super(namespace)
     this._crawlHost = Object.assign({}, crawlHost)
   }
@@ -104,7 +103,6 @@ export class CandleBotSpace extends LogSpace {
     const key = socket['token']
     const {timeFrame, markets} = config
     const host: CrawlHost = Object.assign({}, this._crawlHost, {key})
-    console.log(host)
     this._botDatas[name] = {
       config,
       crawlers: markets.map(market => {
@@ -127,7 +125,6 @@ export class CandleBotSpace extends LogSpace {
         progress: 0,
         process: ProcessStatus.yet,
       },
-      mock: null,
     }
     const {crawlers} = this._botDatas[name]
     await Promise.all(crawlers.map(c => c.open()))
@@ -149,7 +146,7 @@ export class CandleBotSpace extends LogSpace {
 
   @OnAckLevel01(':start')
   async onStart(socket: Socket, name: string): Promise<any> {
-    const botData = await this._validBotData(socket, name)
+    const botData: BotData = await this._validBotData(socket, name)
     if(botData.haveToStop) {
       throw Error('이미 stop 했다.')
     }
@@ -169,17 +166,20 @@ export class CandleBotSpace extends LogSpace {
       }
       return pp
     }))
-    const process = this.processTemplate(config.processArg)
+    const process = await this.processTemplate(config.processArg)
     const namespace = this.namespace.to(name)
     const status = botData.status
     status.process = ProcessStatus.doing
     namespace.emit(':started')
     while(true) {
       const res = config.markets.reduce((res: CandleResponse, market, idx) => {
-        res[market.id] = promised[idx]
+        res[market.id] = {
+          currency: market.currency,
+          data: promised[idx],
+        }
         return res
       }, {})
-      botData.mock = await process(namespace, res)
+      await process(namespace, res)
       if(++status.progress % config.progressInterval % 100 === 0) {
         namespace.emit(':progress', status.progress)
       }
@@ -194,7 +194,7 @@ export class CandleBotSpace extends LogSpace {
     }
     status.process = ProcessStatus.done 
     namespace.emit(':stoped')
-    return botData.mock
+    // return botData.mock
   }
 
   @OnAckLevel01(':stop')
@@ -219,12 +219,6 @@ export class CandleBotSpace extends LogSpace {
   async onStatus(socket: Socket, name: string): Promise<BotStatus> {
     const botData = await this._validBotData(socket, name)
     return botData.status
-  }
-
-  @OnAckLevel01(':mock')
-  async onMock<M>(socket: Socket, name: string): Promise<M> {
-    const botData = await this._validBotData(socket, name)
-    return botData.mock
   }
 
   @OnWrapped('*')

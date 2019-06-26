@@ -22,56 +22,71 @@ import {
   ErrorWithStatusCode,
   Namespace,
   CandleResponse,
+  BotHost,
 } from '../src'
 import {
   TestMock,
 } from '../src/mocks'
 import {
   last,
+  floor,
 } from 'lodash'
 import {
   getConfig,
 } from '../src/utils'
+import {
+  BithumbMock,
+  IBithumbTransactionsInfoType as ITransactionsInfoType,
+} from 'cryptocurrency-mock.client'
 
-
-
-export function ptBtoB(money: number) {
-  const mock = new TestMock(money)
-  const history: {bitfinex: CandleData, bithumb: CandleData}[] = []
-  return async (self: Namespace, res: CandleResponse): Promise<TestMock> => {
-    const bitfinex = res['bitfinex']
-    const bithumb = res['bithumb']
-    if(mock.bought) {
-      mock.sell(bithumb)
-      self.emit(':sold', mock)
-    } else if(history.length !== 0 
-      && bitfinex.close > last(history).bitfinex.close
-      && bithumb.close <= last(history).bithumb.close) {
-      mock.buy(bithumb)
-      self.emit(':bought', mock)
-    }
-    history.push({bitfinex, bithumb})
-    return mock
-  }
-}
 
 
 const io = IO(4001, {
-  path: '/v1',
+  path: '/test',
 })
 const auth = new Authorizer('./jwtconfig.json')
 const key = auth.sign({user: 'naki', permissions: ['level01']})
-console.log('key: ', key)
-const cf = getConfig('./config.json')
+const cf = getConfig('./config.dev.json')
 const botSpace = new CandleBotSpace(io.of('candlebot'), cf.crawlHost, ptBtoB)
-const master = new CandleMasterBot({
+const host: BotHost = {
   url: 'http://localhost:4001/candlebot',
-  version: 'v1',
+  version: 'test',
   key,
-})
+}
+const master = new CandleMasterBot(host)
 let bot01: CandleBot
 let bot01_1: CandleBot
 
+
+BithumbMock.host = Object.assign(cf.mockHost, {key})
+async function ptBtoB(money: number) {
+  const mock = new BithumbMock('BtoB')
+  await mock.open(money)
+  const history: {bitfinex: CandleData, bithumb: CandleData}[] = []
+  return async (self: Namespace, res: CandleResponse): Promise<void> => {
+    const bitfinex = res['bitfinex']
+    const bithumb = res['bithumb']
+    mock.process(bithumb.currency, bithumb.data)
+    const bal = await mock.getBalanceInfo(bithumb.currency)
+    const coin = bal.transType().data.find(b => b.currency === bithumb.currency)
+    const krw = bal.transType().data.find(b => b.currency === 'KRW')
+    if(coin.available > 0) {
+      await mock.marketSell(bithumb.currency, coin.available)
+      const t = (await mock.getTransactionsInfo(bithumb.currency, {count: 1})).transType().data
+      self.emit(':transacted', t[0])
+    } else if(history.length !== 0 
+      && bitfinex.data.close > last(history).bitfinex.close
+      && bithumb.data.close <= last(history).bithumb.close) {
+      const units = floor(krw.available / bithumb.data.close, 2)
+      if(units !== 0) {
+        await mock.marketBuy(bithumb.currency, units)
+        const t = (await mock.getTransactionsInfo(bithumb.currency, {count: 1})).transType().data
+        self.emit(':transacted', t[0])
+      }
+    }
+    history.push({bitfinex: bitfinex.data, bithumb: bithumb.data})
+  }
+}
 
 
 test.before(async () => {
@@ -100,11 +115,10 @@ test.after(() => {
 })
 
 test.serial('CandleMasterBot > unauthorized', async t => {
-  const master = new CandleMasterBot({
-    url: 'http://localhost:4001/candlebot',
-    version: 'v1',
+  const badHost = Object.assign({}, host, {
     key: auth.sign({user: 'naki', permissions: ['badlevel']}),
   })
+  const master = new CandleMasterBot(badHost)
   try {
     await master.open()
   } catch(e) {
@@ -257,26 +271,15 @@ test('CandleBot > :start', async t => {
     t.is(status.process, ProcessStatus.done)
   })
   let bMock: TestMock
-  // :bought
-  let bc = 0
-  bot01.on<TestMock>(':bought', mock => {
-    t.is(mock.history.length, bc++)
+  // :transacted
+  let transes: ITransactionsInfoType[] = []
+  bot01.on<ITransactionsInfoType>(':transacted', res => {
+    transes.unshift(res)
   })
-  let bbc = 0
-  bot01_1.on<TestMock>(':bought', mock => {
-    t.is(mock.history.length, bbc++)
+  bot01_1.on<ITransactionsInfoType>(':transacted', res => {
+    t.deepEqual(res, transes[0])
   })
-  // :sold
-  let sc = 0
-  bot01.on<TestMock>(':sold', mock => {
-    t.is(mock.history.length, ++sc)
-    bMock = mock
-  })
-  let ssc = 0
-  bot01_1.on<TestMock>(':sold', mock => {
-    t.is(mock.history.length, ++ssc)
-  })
-  const mock = await bot01.start(TestMock)
+  await bot01.start()
   // ProcessStatus.done
   t.is((await bot01.status()).process, ProcessStatus.done)
   t.is((await bot01_1.status()).process, ProcessStatus.done)
@@ -289,20 +292,8 @@ test('CandleBot > :start', async t => {
   // :stoped
   t.true(st)
   t.true(sst)
-  // :bought
-  t.is(bc, 18)
-  t.is(bbc, 18)
-  // :sold
-  t.is(sc, 18)
-  t.is(ssc, 18)
-  // mock
-  const mm = await bot01_1.mock<TestMock>()
-  t.deepEqual(mock.history, mm.history)
-  t.is(mock.money, mm.money)
-  t.is(mock.bought, mm.bought)
-  t.deepEqual(mock.history, bMock.history)
-  t.is(mock.money, bMock.money)
-  t.is(mock.bought, bMock.bought)
-  t.is(mock.history.length, 18)
-  mock.printTotal()
+  // transactions
+  const mock = new BithumbMock('BtoB')
+  const got = (await mock.getTransactionsInfo('BTC', {count: 100})).transType().data
+  t.deepEqual(got, transes)
 })

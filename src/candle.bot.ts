@@ -12,7 +12,10 @@ import p from 'fourdollar.promisify'
 
 
 export type CandleResponse = {
-  [id: string]: CandleData|BithumbCandleData
+  [id: string]: {
+    currency: BithumbCC|BitfinexCC
+    data: CandleData|BithumbCandleData
+  }
 }
 
 export interface CandleBotConfig {
@@ -156,9 +159,9 @@ export class CandleMasterBot extends BaseBot {
 }
 
 
-interface IMockConstructor<M> {
-  new (ref: M): M
-}
+// interface IMockConstructor<M> {
+//   new (ref: M): M
+// }
 
 export class CandleBot extends BaseBot {
   constructor(name: string, socket: SocketIOClient.Socket) {
@@ -168,15 +171,19 @@ export class CandleBot extends BaseBot {
   on(evt: ':progress', cb: (count: number) => void): SocketIOClient.Emitter
   on(evt: ':started', cb: () => void): SocketIOClient.Emitter
   on(evt: ':stoped', cb: () => void): SocketIOClient.Emitter
-  on<M>(evt: ':sold', cb: (mock: M) => void): SocketIOClient.Emitter
-  on<M>(evt: ':bought', cb: (mock: M) => void): SocketIOClient.Emitter
+  on<T>(evt: ':transacted', cb: (result: T) => void): SocketIOClient.Emitter
+  // on<M>(evt: ':sold', cb: (mock: M) => void): SocketIOClient.Emitter
+  // on<M>(evt: ':bought', cb: (mock: M) => void): SocketIOClient.Emitter
   on(evt: string, cb: (res: any) => void): SocketIOClient.Emitter {
     return super.on(evt, cb)
   }
 
-  async start<M>(constructor: IMockConstructor<M>): Promise<M> {
-    const ref = await this._ack(':start', this.name)
-    return new constructor(ref)
+  // async start<M>(constructor: IMockConstructor<M>): Promise<M> {
+  //   const ref = await this._ack(':start', this.name)
+  //   return new constructor(ref)
+  // }
+  async start(): Promise<void> {
+    return this._ack(':start', this.name)
   }
 
   stop(): Promise<void> {
@@ -185,9 +192,5 @@ export class CandleBot extends BaseBot {
 
   async status(): Promise<BotStatus> {
     return this._ack(':status', this.name)
-  }
-
-  async mock<M>(): Promise<M> {
-    return this._ack(':mock', this.name)
   }
 }

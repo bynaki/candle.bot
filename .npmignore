@@ -17,3 +17,4 @@ tsconfig.*json
 .gitignore
 jwtconfig.json
 config.json
+config.dev.json

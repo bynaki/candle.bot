@@ -1,6 +1,6 @@
 {
   "name": "candle.bot",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Cryptocurrency Candle Bot",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -47,6 +47,7 @@
   "dependencies": {
     "bynaki.auth": "^0.1.1",
     "cryptocurrency-crawler.client": "^0.1.3",
+    "cryptocurrency-mock.client": "^0.1.5",
     "cryptocurrency.api": "^0.1.1",
     "dayjs": "^1.8.12",
     "fourdollar.filewriter": "^1.0.2",
@@ -58,7 +59,7 @@
   },
   "ava": {
     "files": [
-      "dist.test/test/**/bithumb.mock.spec.js"
+      "dist.test/test/**/test.spec.js"
     ]
   }
 }

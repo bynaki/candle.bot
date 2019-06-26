@@ -10,3 +10,4 @@ config.ts
 archive.tar.gz
 jwtconfig.json
 config.json
+config.dev.json

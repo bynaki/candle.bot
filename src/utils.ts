@@ -8,6 +8,9 @@ import p from 'fourdollar.promisify'
 import {
   CrawlHost,
 } from './interface'
+import {
+  MockHost,
+} from 'cryptocurrency-mock.client'
 
 
 export function sendingErrorData(err: ErrorWithStatusCode): {
@@ -24,9 +27,9 @@ export function sendingErrorData(err: ErrorWithStatusCode): {
   }
 }
 
-
 export function getConfig(path: string): {
   crawlHost: CrawlHost
+  mockHost: MockHost
   bithumb: {
     connectKey: string
     secretKey: string
