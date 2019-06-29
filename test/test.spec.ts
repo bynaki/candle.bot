@@ -5,11 +5,12 @@
 import test from 'ava'
 import * as IO from 'socket.io'
 import {
-  CandleBotSpace,
-} from '../src/bot.space'
-import {
   Authorizer,
 } from 'bynaki.auth'
+import {
+  Namespace,
+  CandleBotSpace,
+} from '../src'
 import {
   CandleBot,
   CandleMasterBot,
@@ -19,14 +20,10 @@ import {
   BithumbCC,
   ProcessStatus,
   CandleData,
-  ErrorWithStatusCode,
-  Namespace,
   CandleResponse,
   BotHost,
-} from '../src'
-import {
-  TestMock,
-} from '../src/mocks'
+  ErrorWithStatusCode,
+} from '../src/client'
 import {
   last,
   floor,
@@ -270,7 +267,6 @@ test('CandleBot > :start', async t => {
     const status = await bot01_1.status()
     t.is(status.process, ProcessStatus.done)
   })
-  let bMock: TestMock
   // :transacted
   let transes: ITransactionsInfoType[] = []
   bot01.on<ITransactionsInfoType>(':transacted', res => {

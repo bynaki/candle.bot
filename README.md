@@ -1,3 +1,3 @@
-# Cryptocurrency Candle Bot
+# Cryptocurrency Candle Bot Server
 
 **This is useless to you.**

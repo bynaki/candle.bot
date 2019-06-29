@@ -11,7 +11,7 @@ import p from 'fourdollar.promisify'
 
 
 
-export type CandleResponse = {
+export interface CandleResponse {
   [id: string]: {
     currency: BithumbCC|BitfinexCC
     data: CandleData|BithumbCandleData
@@ -35,7 +35,7 @@ export interface CandleBotConfig {
   })[]
 }
 
-export type BotHost = {
+export interface BotHost {
   url: string
   version: string
   key: string

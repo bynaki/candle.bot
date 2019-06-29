@@ -2,11 +2,12 @@
  * status code 와 함께 Error 객체
  */
 
-export class ErrorWithStatusCode extends Error {
-  constructor(message: string, public status: number = 500) {
-    super(message)
-  }
-}
+import {
+  ErrorWithStatusCode,
+} from './client'
+
+
+export {ErrorWithStatusCode}
 
 export class ErrorBadRequest extends ErrorWithStatusCode {
   constructor(msg?: string) {

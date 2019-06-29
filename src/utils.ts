@@ -2,9 +2,8 @@ import {
   ErrorWithStatusCode,
 } from './errors'
 import {
-  readFile, readFileSync,
+  readFileSync,
 } from 'fs'
-import p from 'fourdollar.promisify'
 import {
   CrawlHost,
 } from './interface'

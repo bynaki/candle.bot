@@ -1,7 +1,7 @@
 {
-  "name": "candle.bot",
-  "version": "0.3.1",
-  "description": "Cryptocurrency Candle Bot",
+  "name": "candle.bot.server",
+  "version": "0.3.5",
+  "description": "Cryptocurrency Candle Bot Server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "author": {
@@ -36,25 +36,26 @@
   "devDependencies": {
     "@types/lodash": "^4.14.123",
     "@types/node": "^11.11.3",
-    "@types/socket.io-client": "^1.4.32",
     "ava": "^1.3.1",
     "cross-env": "^5.2.0",
     "glob": "^7.1.3",
     "parcel-bundler": "^1.12.2",
-    "socket.io-client": "^2.2.0",
     "typescript": "^3.3.3333"
   },
   "dependencies": {
+    "@types/socket.io-client": "^1.4.32",
     "bynaki.auth": "^0.1.1",
     "cryptocurrency-crawler.client": "^0.1.3",
     "cryptocurrency-mock.client": "^0.1.5",
     "cryptocurrency.api": "^0.1.1",
     "dayjs": "^1.8.12",
+    "force-unpublish": "^0.2.6",
     "fourdollar.filewriter": "^1.0.2",
     "fourdollar.logger": "^1.0.4",
     "fourdollar.promisify": "^1.0.6",
     "lodash": "^4.17.11",
     "socket.io": "^2.2.0",
+    "socket.io-client": "^2.2.0",
     "socket.io-decorator": "^0.4.3"
   },
   "ava": {

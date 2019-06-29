@@ -5,10 +5,7 @@ import {
   Use,
 } from 'socket.io-decorator'
 import {
-  ErrorUnauthorized,
   ErrorNotFound,
-  ErrorBadRequest,
-  ErrorWithStatusCode
 } from './errors'
 import {
   OnWrapped,
@@ -23,13 +20,9 @@ import {
 import {
   BitfinexCandleCrawler,
   BithumbCandleCrawler,
-  TimeFrame,
-  BithumbCC,
-  BitfinexCC,
   CrawlHost,
   Market,
   CandleData,
-  BithumbCandleData,
   ICandleCrawlerClient,
 } from 'cryptocurrency-crawler.client'
 import {
@@ -37,8 +30,9 @@ import {
   CandleBotConfig,
   BotStatus,
   ProcessStatus,
-} from './candle.bot'
+} from './client'
 import p from 'fourdollar.promisify'
+
 
 
 type BotData = {

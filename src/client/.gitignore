@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist.test/
+.cache/
+.DS_Store
+*.swp
+npm-debug.log
+yarn-error.log
+config.ts
+archive.tar.gz
+jwtconfig.json
+config.json
+config.dev.json
