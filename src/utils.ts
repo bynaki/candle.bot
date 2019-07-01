@@ -6,7 +6,7 @@ import {
 } from 'fs'
 import {
   CrawlHost,
-} from './interface'
+} from 'cryptocurrency-crawler.client'
 import {
   MockHost,
 } from 'cryptocurrency-mock.client'

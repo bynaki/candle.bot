@@ -1,6 +1,6 @@
 {
   "name": "candle.bot.server",
-  "version": "0.3.5",
+  "version": "0.3.8",
   "description": "Cryptocurrency Candle Bot Server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,6 +24,7 @@
     "build.parcel": "parcel build --target=node \"$npm_package_config_srcMain\" && bin/copy \"src/**/!(*.ts)\" \"dist\" \"**/node_modules/**\" \"**/.DS_Store\"",
     "build.parcel.debug": "parcel build --no-minify --no-source-maps --no-cache --target=node \"$npm_package_config_srcMain\" && bin/copy \"src/**/!(*.ts)\" \"dist\" \"**/node_modules/**\" \"**/.DS_Store\"",
     "clean": "rimraf dist",
+    "publish.auto": "yarn clean && yarn build.tsc && yarn publish",
     "archive": "tar cvfz archive.tar.gz dist/ package.json jwtconfig.json",
     "release": "npm run clean && npm run build.parcel && npm run archive && bin/release",
     "build.util": "tsc --outDir utils utils/index.ts",

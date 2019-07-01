@@ -1,6 +1,6 @@
 {
   "name": "candle.bot",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Cryptocurrency Candle Bot",
   "main": "index.js",
   "types": "index.d.ts",

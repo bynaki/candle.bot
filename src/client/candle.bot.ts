@@ -4,19 +4,10 @@ import {
   Market,
   BithumbCC,
   BitfinexCC,
-  CandleData,
-  BithumbCandleData,
 } from 'cryptocurrency-crawler.client'
 import p from 'fourdollar.promisify'
 
 
-
-export interface CandleResponse {
-  [id: string]: {
-    currency: BithumbCC|BitfinexCC
-    data: CandleData|BithumbCandleData
-  }
-}
 
 export interface CandleBotConfig {
   timeFrame: TimeFrame

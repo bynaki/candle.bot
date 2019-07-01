@@ -22,11 +22,13 @@ import {
   BithumbCandleCrawler,
   CrawlHost,
   Market,
+  BithumbCC,
+  BitfinexCC,
   CandleData,
+  BithumbCandleData,
   ICandleCrawlerClient,
 } from 'cryptocurrency-crawler.client'
 import {
-  CandleResponse,
   CandleBotConfig,
   BotStatus,
   ProcessStatus,
@@ -34,6 +36,13 @@ import {
 import p from 'fourdollar.promisify'
 
 
+
+export interface CandleResponse {
+  [id: string]: {
+    currency: BithumbCC|BitfinexCC
+    data: CandleData|BithumbCandleData
+  }
+}
 
 type BotData = {
   config: CandleBotConfig
