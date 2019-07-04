@@ -11,6 +11,7 @@ export {
   BitfinexCC,
   CandleData,
   BithumbCandleData,
+  CrawlHost,
 } from 'cryptocurrency-crawler.client'
 export * from './errors'
 export {

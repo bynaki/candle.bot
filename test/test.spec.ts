@@ -10,6 +10,7 @@ import {
 import {
   Namespace,
   CandleBotSpace,
+  CandleResponse,
 } from '../src'
 import {
   CandleBot,
@@ -20,7 +21,6 @@ import {
   BithumbCC,
   ProcessStatus,
   CandleData,
-  CandleResponse,
   BotHost,
   ErrorWithStatusCode,
 } from '../src/client'
