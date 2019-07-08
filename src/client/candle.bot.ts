@@ -118,28 +118,64 @@ class BaseBot {
 }
 
 
-export class CandleMasterBot extends BaseBot {
-  constructor(public readonly host: BotHost) {
-    super('master', newSocket(host))
+export class CandleMasterBot {
+  private static _host: BotHost
+  private static _socket: SocketIOClient.Socket
+  private static _ack: (evt: string, ...any: any[]) => Promise<any>
+
+  static async init(host: BotHost): Promise<void> {
+    const socket = newSocket(host)
+    await openSocket(socket, 'master')
+    this._host = host
+    this._socket = socket
+    this._ack = p(socket.emit, socket)
   }
 
-  open(): Promise<void> {
-    return openSocket(this.socket, 'master')
+  static get host(): BotHost {
+    return this._host
   }
 
-  async ids(name?: string): Promise<string[]> {
+  static get socket(): SocketIOClient.Socket {
+    return this._socket
+  }
+
+  static get id(): string {
+    return this.socket.id
+  }
+
+  static get connected(): boolean {
+    return this.socket.connected
+  }
+
+  static get disconnected(): boolean {
+    return this.socket.disconnected
+  }
+
+  static close(): void {
+    this.socket.close()
+  }
+
+  static on(event: string, fn: Function): SocketIOClient.Emitter {
+    return this.socket.on(event, fn)
+  }
+
+  static once(event: string, fn: Function): SocketIOClient.Emitter {
+    return this.socket.on(event, fn)
+  }
+
+  static async ids(name?: string): Promise<string[]> {
     return this._ack(':ids', name)
   }
 
-  async beBot(name: string): Promise<boolean> {
+  static async beBot(name: string): Promise<boolean> {
     return this._ack(':be.bot', name)
   }
 
-  async getBot(name: string): Promise<CandleBot> {
+  static async getBot(name: string): Promise<CandleBot> {
     return this.newBot(name)
   }
 
-  async newBot(name: string, config?: CandleBotConfig): Promise<CandleBot> {
+  static async newBot(name: string, config?: CandleBotConfig): Promise<CandleBot> {
     if(name === 'master') {
       throw Error('master는 일반 bot이 될 수 없다.')
     }

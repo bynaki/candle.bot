@@ -45,14 +45,7 @@ const auth = new Authorizer('./jwtconfig.json')
 const key = auth.sign({user: 'naki', permissions: ['level01']})
 const cf = getConfig('./config.dev.json')
 const botSpace = new CandleBotSpace(io.of('candlebot'), cf.crawlHost, ptBtoB)
-const host: BotHost = {
-  url: 'http://localhost:4001/candlebot',
-  version: 'test',
-  key,
-}
-const master = new CandleMasterBot(host)
-let bot01: CandleBot
-let bot01_1: CandleBot
+
 
 
 BithumbMock.host = Object.assign(cf.mockHost, {key})
@@ -86,9 +79,31 @@ async function ptBtoB(money: number) {
 }
 
 
-test.before(async () => {
-  await master.open()
-  bot01 = await master.newBot('bot01', {
+
+const host: BotHost = {
+  url: 'http://localhost:4001/candlebot',
+  version: 'test',
+  key,
+}
+let bot01: CandleBot
+let bot01_1: CandleBot
+
+test.serial('CandleMasterBot > unauthorized', async t => {
+  const badHost = Object.assign({}, host, {
+    key: auth.sign({user: 'naki', permissions: ['badlevel']}),
+  })
+  try {
+    await CandleMasterBot.init(badHost)
+  } catch(e) {
+    const err: ErrorWithStatusCode = e
+    t.is(err.message, 'Unauthorized: denied')
+    t.is(err.status, 401)
+  }
+})
+
+test.serial('CandleMasterBot > init()', async t => {
+  await CandleMasterBot.init(host)
+  bot01 = await CandleMasterBot.newBot('bot01', {
     startTime: new Date('2019.01.01 12:00').getTime(),
     endTime: new Date('2019.01.01 14:05').getTime(),
     timeFrame: TimeFrame.t1m,
@@ -104,39 +119,26 @@ test.before(async () => {
       currency: BithumbCC.BTC,
     }]
   })
-  bot01_1 = await master.getBot('bot01')
+  bot01_1 = await CandleMasterBot.getBot('bot01')
+  t.pass()
 })
 
 test.after(() => {
   io.close()
 })
 
-test.serial('CandleMasterBot > unauthorized', async t => {
-  const badHost = Object.assign({}, host, {
-    key: auth.sign({user: 'naki', permissions: ['badlevel']}),
-  })
-  const master = new CandleMasterBot(badHost)
-  try {
-    await master.open()
-  } catch(e) {
-    const err: ErrorWithStatusCode = e
-    t.is(err.message, 'Unauthorized: denied')
-    t.is(err.status, 401)
-  }
-})
-
 test.serial('CandleMasterBot > :ids', async t => {
-  const ids = await master.ids()
-  t.is(ids[0], master.id)
+  const ids = await CandleMasterBot.ids()
+  t.is(ids[0], CandleMasterBot.id)
 })
 
 test.serial('CandleMasterBot > :beBot', async t => {
-  t.false(await master.beBot('foobar'))
+  t.false(await CandleMasterBot.beBot('foobar'))
 })
 
 test.serial('CandleMasterBot > :new.bot', async t => {
-  t.false(await master.beBot('foobar'))
-  const bot = await master.newBot('foobar', {
+  t.false(await CandleMasterBot.beBot('foobar'))
+  const bot = await CandleMasterBot.newBot('foobar', {
     timeFrame: TimeFrame.t1m,
     markets: [{
       id: 'bitfinex',
@@ -149,14 +151,14 @@ test.serial('CandleMasterBot > :new.bot', async t => {
     }]
   })
   t.is(bot.name, 'foobar')
-  t.true(await master.beBot('foobar'))
-  t.is((await master.ids('foobar')).length, 1)
-  t.is(bot.id, (await master.ids('foobar'))[0])
+  t.true(await CandleMasterBot.beBot('foobar'))
+  t.is((await CandleMasterBot.ids('foobar')).length, 1)
+  t.is(bot.id, (await CandleMasterBot.ids('foobar'))[0])
 })
 
 test.serial('CandleMasterBot > :new.bot > error: master는 일반 bot이 될 수 없다.', async t => {
   try {
-    await master.newBot('master', {
+    await CandleMasterBot.newBot('master', {
       timeFrame: TimeFrame.t1m,
       markets: [{
         id: 'bitfinex',
@@ -176,7 +178,7 @@ test.serial('CandleMasterBot > :new.bot > error: master는 일반 bot이 될 수
 
 test.serial('CandleMasterBot > :new.bot > error: 이미 \'foobar\'의 이름으로 봇이 존재하므로 다시 config할 수 없다.', async t => {
   try {
-    const bot = await master.newBot('foobar', {
+    const bot = await CandleMasterBot.newBot('foobar', {
       timeFrame: TimeFrame.t1m,
       markets: [{
         id: 'bitfinex',
@@ -196,15 +198,15 @@ test.serial('CandleMasterBot > :new.bot > error: 이미 \'foobar\'의 이름으�
 })
 
 test.serial('CandleMasterBot > :get.bot', async t => {
-  const bot = await master.getBot('foobar')
+  const bot = await CandleMasterBot.getBot('foobar')
   t.is(bot.name, 'foobar')
-  t.is((await master.ids('foobar')).length, 2)
-  t.true((await master.ids('foobar')).includes(bot.id))
+  t.is((await CandleMasterBot.ids('foobar')).length, 2)
+  t.true((await CandleMasterBot.ids('foobar')).includes(bot.id))
 })
 
 test.serial('CandleMasterBot > :get.bot > error: \'none\' 이름의 Bot이 존재하지 않는다.', async t => {
   try {
-    await master.getBot('none')
+    await CandleMasterBot.getBot('none')
   } catch(e) {
     const err: ErrorWithStatusCode = e
     t.is(err.message, '\'none\' 이름의 Bot이 존재하지 않는다.')
