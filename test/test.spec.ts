@@ -88,6 +88,21 @@ const host: BotHost = {
 let bot01: CandleBot
 let bot01_1: CandleBot
 
+
+
+test.serial('CandleMasterBot > init(): error', async t => {
+  const badHost = Object.assign({}, host, {
+    key: 'badkey',
+  })
+  try {
+    await CandleMasterBot.init(badHost)
+  } catch(e) {
+    const err: ErrorWithStatusCode = e
+    t.is(err.message, 'Unauthorized: jwt malformed')
+    t.is(err.status, 500)
+  }
+})
+
 test.serial('CandleMasterBot > unauthorized', async t => {
   const badHost = Object.assign({}, host, {
     key: auth.sign({user: 'naki', permissions: ['badlevel']}),

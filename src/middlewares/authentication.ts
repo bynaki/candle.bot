@@ -11,10 +11,8 @@ import {
   Middleware,
 } from 'socket.io-decorator'
 
-// const cfgPath = (process.env['NODE_ENV'] === 'development')? 
-//   './jwtconfig.base.json' : './jwtconfig.json'
-const cfgPath = './jwtconfig.json'
-const auth = new Authorizer(cfgPath)
+const auth = new Authorizer('./jwtconfig.json')
+
 
 
 export function getToken(socket: Socket): string {

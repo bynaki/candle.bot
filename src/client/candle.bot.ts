@@ -9,6 +9,13 @@ import p from 'fourdollar.promisify'
 
 
 
+export class ErrorWithStatusCode extends Error {
+  constructor(message: string, public status: number = 500) {
+    super(message)
+  }
+}
+
+
 export interface CandleBotConfig {
   timeFrame: TimeFrame
   startTime?: number
@@ -124,11 +131,19 @@ export class CandleMasterBot {
   private static _ack: (evt: string, ...any: any[]) => Promise<any>
 
   static async init(host: BotHost): Promise<void> {
-    const socket = newSocket(host)
-    await openSocket(socket, 'master')
-    this._host = host
-    this._socket = socket
-    this._ack = p(socket.emit, socket)
+    try {
+      const socket = newSocket(host)
+      await openSocket(socket, 'master')
+      this._host = host
+      this._socket = socket
+      this._ack = p(socket.emit, socket)
+    } catch(e) {
+      if(typeof(e) === 'string') {
+        throw new ErrorWithStatusCode(e, 500)
+      } else {
+        throw e
+      }
+    }
   }
 
   static get host(): BotHost {
