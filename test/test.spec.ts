@@ -49,9 +49,8 @@ const botSpace = new CandleBotSpace(io.of('candlebot'), cf.crawlHost, ptBtoB)
 
 
 BithumbMock.host = Object.assign(cf.mockHost, {key})
-async function ptBtoB(money: number) {
-  const mock = new BithumbMock('BtoB')
-  await mock.open(money)
+async function ptBtoB(opt: {krw: number, fee: number}) {
+  const mock = new BithumbMock('BtoB', opt)
   const history: {bitfinex: CandleData, bithumb: CandleData}[] = []
   return async (self: Namespace, res: CandleResponse): Promise<void> => {
     const bitfinex = res['bitfinex']
@@ -122,7 +121,10 @@ test.serial('CandleMasterBot > init()', async t => {
     startTime: new Date('2019.01.01 12:00').getTime(),
     endTime: new Date('2019.01.01 14:05').getTime(),
     timeFrame: TimeFrame.t1m,
-    processArg: 1000000,
+    processArg: {
+      krw: 1000000,
+      fee: 0,
+    },
     progressInterval: 10,
     markets: [{
       id: 'bitfinex',
