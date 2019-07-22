@@ -64,10 +64,10 @@ component-inherit@0.0.3:
   resolved "https://registry.yarnpkg.com/component-inherit/-/component-inherit-0.0.3.tgz#645fc4adf58b72b649d5cae65135619db26ff143"
   integrity sha1-ZF/ErfWLcrZJ1crmUTVhnbJv8UM=
 
-cryptocurrency-crawler.client@^0.1.3:
-  version "0.1.3"
-  resolved "https://registry.yarnpkg.com/cryptocurrency-crawler.client/-/cryptocurrency-crawler.client-0.1.3.tgz#87a684bdb4fb511f08d7f341302046f624f1a305"
-  integrity sha512-dWZKoWf5w+AdZ/4u1gyL1xR45e6puuX/4uAcq9DxjaVFFduoKnDLKcO3VggCp45h4U31iDwQu4R41oDET/T/Og==
+cryptocurrency-crawler.client@^0.1.4:
+  version "0.1.4"
+  resolved "https://registry.yarnpkg.com/cryptocurrency-crawler.client/-/cryptocurrency-crawler.client-0.1.4.tgz#3a4d2a0023cbdfda094f12f07a527434a2ae5b9b"
+  integrity sha512-DGA11i0qAvmJYC4Lzr0U+2IcV90/Oe8R9mrkxqEK0ik6WHbia0HNo9JiCQvyRgXkYfZ4gt1upWWRpeiQLVi2qQ==
   dependencies:
     fourdollar.promisify "^1.0.6"
     socket.io-client "^2.2.0"

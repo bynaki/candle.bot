@@ -55,7 +55,7 @@ async function ptBtoB(opt: {krw: number, fee: number}) {
   return async (self: Namespace, res: CandleResponse): Promise<void> => {
     const bitfinex = res['bitfinex']
     const bithumb = res['bithumb']
-    mock.process(bithumb.currency, bithumb.data)
+    await mock.process(bithumb.currency, bithumb.data)
     const bal = await mock.getBalanceInfo(bithumb.currency)
     const coin = bal.transType().data.find(b => b.currency === bithumb.currency)
     const krw = bal.transType().data.find(b => b.currency === 'KRW')

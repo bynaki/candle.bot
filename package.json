@@ -1,6 +1,6 @@
 {
   "name": "candle.bot.server",
-  "version": "0.4.2",
+  "version": "0.4.4",
   "description": "Cryptocurrency Candle Bot Server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -46,7 +46,7 @@
   "dependencies": {
     "@types/socket.io-client": "^1.4.32",
     "bynaki.auth": "^0.1.2",
-    "cryptocurrency-crawler.client": "^0.1.3",
+    "cryptocurrency-crawler.client": "^0.1.4",
     "cryptocurrency-mock.client": "^0.2.3",
     "cryptocurrency.api": "^0.1.1",
     "dayjs": "^1.8.14",
