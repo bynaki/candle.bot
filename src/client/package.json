@@ -1,6 +1,6 @@
 {
   "name": "candle.bot",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "description": "Cryptocurrency Candle Bot",
   "main": "index.js",
   "types": "index.d.ts",
@@ -15,7 +15,7 @@
   "license": "MIT",
   "dependencies": {
     "@types/socket.io-client": "^1.4.32",
-    "cryptocurrency-crawler.client": "^0.1.4",
+    "cryptocurrency-crawler.client": "^0.2.0",
     "fourdollar.promisify": "^1.0.6",
     "socket.io-client": "^2.2.0"
   }

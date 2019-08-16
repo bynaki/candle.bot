@@ -1,6 +1,6 @@
 {
   "name": "candle.bot.server",
-  "version": "0.4.4",
+  "version": "0.5.0",
   "description": "Cryptocurrency Candle Bot Server",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -35,25 +35,25 @@
     "fetch": "curl -o archive.tar.gz \"$RELEASE_URL\" && tar xvfz archive.tar.gz && npm install"
   },
   "devDependencies": {
-    "@types/lodash": "^4.14.135",
-    "@types/node": "^12.0.12",
-    "ava": "^2.1.0",
+    "@types/lodash": "^4.14.136",
+    "@types/node": "^12.7.1",
+    "ava": "^2.2.0",
     "cross-env": "^5.2.0",
     "glob": "^7.1.4",
     "parcel-bundler": "^1.12.2",
-    "typescript": "^3.5.2"
+    "typescript": "^3.5.3"
   },
   "dependencies": {
     "@types/socket.io-client": "^1.4.32",
     "bynaki.auth": "^0.1.2",
-    "cryptocurrency-crawler.client": "^0.1.4",
-    "cryptocurrency-mock.client": "^0.2.3",
-    "cryptocurrency.api": "^0.1.1",
-    "dayjs": "^1.8.14",
+    "cryptocurrency-crawler.client": "^0.2.0",
+    "cryptocurrency-mock.client": "^0.2.4",
+    "cryptocurrency.api": "^0.2.1",
+    "dayjs": "^1.8.15",
     "fourdollar.filewriter": "^1.0.2",
     "fourdollar.logger": "^1.0.4",
     "fourdollar.promisify": "^1.0.6",
-    "lodash": "^4.17.11",
+    "lodash": "^4.17.15",
     "socket.io": "^2.2.0",
     "socket.io-client": "^2.2.0",
     "socket.io-decorator": "^0.4.3"

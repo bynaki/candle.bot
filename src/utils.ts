@@ -3,6 +3,7 @@ import {
 } from './errors'
 import {
   readFileSync,
+  readFile,
 } from 'fs'
 import {
   CrawlHost,
@@ -35,4 +36,17 @@ export function getConfig(path: string): {
   }
 } {
   return JSON.parse(readFileSync(path).toString())
+}
+
+export async function getVersion(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    readFile('./package.json', (err, data) => {
+      if(err) {
+        reject(err)
+        return
+      }
+      const json = JSON.parse(data.toString())
+      resolve(json.version)
+    })
+  })
 }

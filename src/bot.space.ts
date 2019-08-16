@@ -27,6 +27,8 @@ import {
   CandleData,
   BithumbCandleData,
   ICandleCrawlerClient,
+  BinanceCC,
+  BinanceCandleCrawler,
 } from 'cryptocurrency-crawler.client'
 import {
   CandleBotConfig,
@@ -34,19 +36,22 @@ import {
   ProcessStatus,
 } from './client'
 import p from 'fourdollar.promisify'
+import {
+  getVersion,
+} from './utils'
 
 
 
 export interface CandleResponse {
   [id: string]: {
-    currency: BithumbCC|BitfinexCC
+    currency: BithumbCC|BitfinexCC|BinanceCC
     data: CandleData|BithumbCandleData
   }
 }
 
 type BotData = {
   config: CandleBotConfig
-  crawlers: Array<BithumbCandleCrawler|BitfinexCandleCrawler>
+  crawlers: Array<BithumbCandleCrawler|BitfinexCandleCrawler|BinanceCandleCrawler>
   haveToStop: boolean
   status: BotStatus
 }
@@ -69,8 +74,13 @@ export class CandleBotSpace extends LogSpace {
     this._crawlHost = Object.assign({}, crawlHost)
   }
 
+  @OnAckLevel01(':version')
+  version(socket: Socket): Promise<string> {
+    return getVersion()
+  }
+
   @OnAckLevel01(':ids')
-  async onIds(socket: Socket, name?: string): Promise<string[]> {
+  async ids(socket: Socket, name?: string): Promise<string[]> {
     let room: Namespace
     if(name) {
       room = this.namespace.in(name)
@@ -81,12 +91,12 @@ export class CandleBotSpace extends LogSpace {
   }
 
   @OnAckLevel01(':be.bot')
-  OnBeBot(socket: Socket, name: string): boolean {
+  beBot(socket: Socket, name: string): boolean {
     return !!this._botDatas[name]
   }
 
   @OnAckLevel01(':get.bot')
-  async onGetBot(socket: Socket, name: string) {
+  async getBot(socket: Socket, name: string) {
     if((!this._botDatas[name]) && (name !== 'master')) {
       throw Error(`'${name}' 이름의 Bot이 존재하지 않는다.`)
     }
@@ -95,7 +105,7 @@ export class CandleBotSpace extends LogSpace {
   }
 
   @OnAckLevel01(':new.bot')
-  async onNewBot(socket: Socket, {name, config}: {name: string, config: CandleBotConfig}) {
+  async newBot(socket: Socket, {name, config}: {name: string, config: CandleBotConfig}) {
     if(name === 'master') {
       throw Error('master는 일반 bot이 될 수 없다.')
     }
@@ -112,11 +122,12 @@ export class CandleBotSpace extends LogSpace {
         switch(market.name) {
           case Market.Bithumb: {
             return new BithumbCandleCrawler(market.currency, timeFrame, host)
-            break
           }
           case Market.Bitfinex: {
             return new BitfinexCandleCrawler(market.currency, timeFrame, host)
-            break
+          }
+          case Market.Binance: {
+            return new BinanceCandleCrawler(market.currency, timeFrame, host)
           }
           default: {
             throw Error('지원하지 않는 market 이다.')
@@ -140,7 +151,7 @@ export class CandleBotSpace extends LogSpace {
     if(!botData) {
       throw Error('먼저 Config를 세팅해야 한다.')
     }
-    const belong = await this.onIds(socket, name)
+    const belong = await this.ids(socket, name)
     if(!belong.includes(socket.id)) {
       throw Error(`'${name}'에 속해있지 않은 socket이 자격없는 요청을 했다.`)
     }

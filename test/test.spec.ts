@@ -35,6 +35,8 @@ import {
   BithumbMock,
   IBithumbTransactionsInfoType as ITransactionsInfoType,
 } from 'cryptocurrency-mock.client'
+import { Binance } from 'cryptocurrency.api';
+import { BinanceCC } from 'cryptocurrency-crawler.client';
 
 
 
@@ -51,10 +53,11 @@ const botSpace = new CandleBotSpace(io.of('candlebot'), cf.crawlHost, ptBtoB)
 BithumbMock.host = Object.assign(cf.mockHost, {key})
 async function ptBtoB(opt: {krw: number, fee: number}) {
   const mock = new BithumbMock('BtoB', opt)
-  const history: {bitfinex: CandleData, bithumb: CandleData}[] = []
+  const history: {bitfinex: CandleData, bithumb: CandleData, binance: CandleData}[] = []
   return async (self: Namespace, res: CandleResponse): Promise<void> => {
     const bitfinex = res['bitfinex']
     const bithumb = res['bithumb']
+    const binance = res['binance']
     await mock.process(bithumb.currency, bithumb.data)
     const bal = await mock.getBalanceInfo(bithumb.currency)
     const coin = bal.transType().data.find(b => b.currency === bithumb.currency)
@@ -65,6 +68,7 @@ async function ptBtoB(opt: {krw: number, fee: number}) {
       self.emit(':transacted', t[0])
     } else if(history.length !== 0 
       && bitfinex.data.close > last(history).bitfinex.close
+      && binance.data.close > last(history).binance.close
       && bithumb.data.close <= last(history).bithumb.close) {
       const units = floor(krw.available / bithumb.data.close, 2)
       if(units !== 0) {
@@ -73,7 +77,7 @@ async function ptBtoB(opt: {krw: number, fee: number}) {
         self.emit(':transacted', t[0])
       }
     }
-    history.push({bitfinex: bitfinex.data, bithumb: bithumb.data})
+    history.push({bitfinex: bitfinex.data, bithumb: bithumb.data, binance: binance.data})
   }
 }
 
@@ -134,6 +138,10 @@ test.serial('CandleMasterBot > init()', async t => {
       id: 'bithumb',
       name: Market.Bithumb,
       currency: BithumbCC.BTC,
+    }, {
+      id: 'binance',
+      name: Market.Binance,
+      currency: BinanceCC.BTCUSDT,
     }]
   })
   bot01_1 = await CandleMasterBot.getBot('bot01')
@@ -142,6 +150,11 @@ test.serial('CandleMasterBot > init()', async t => {
 
 test.after(() => {
   io.close()
+})
+
+test.serial('CandleMasterBot > :version', async t => {
+  const version = await CandleMasterBot.version()
+  t.is(version, '0.5.0')
 })
 
 test.serial('CandleMasterBot > :ids', async t => {
@@ -165,6 +178,10 @@ test.serial('CandleMasterBot > :new.bot', async t => {
       id: 'bithumb',
       name: Market.Bithumb,
       currency: BithumbCC.BTC,
+    }, {
+      id: 'binance',
+      name: Market.Binance,
+      currency: BinanceCC.BTCUSDT,
     }]
   })
   t.is(bot.name, 'foobar')
@@ -185,6 +202,10 @@ test.serial('CandleMasterBot > :new.bot > error: master는 일반 bot이 될 수
         id: 'bithumb',
         name: Market.Bithumb,
         currency: BithumbCC.BTC,
+      }, {
+        id: 'binance',
+        name: Market.Binance,
+        currency: BinanceCC.BTCUSDT,
       }]
     })
   } catch(e) {
@@ -205,6 +226,10 @@ test.serial('CandleMasterBot > :new.bot > error: 이미 \'foobar\'의 이름으�
         id: 'bithumb',
         name: Market.Bithumb,
         currency: BithumbCC.BTC,
+      }, {
+        id: 'binance',
+        name: Market.Binance,
+        currency: BinanceCC.BTCUSDT,
       }]
     })
   } catch(e) {
@@ -311,4 +336,5 @@ test('CandleBot > :start', async t => {
   const mock = new BithumbMock('BtoB')
   const got = (await mock.getTransactionsInfo('BTC', {count: 100})).transType().data
   t.deepEqual(got, transes)
+  console.log(got)
 })
