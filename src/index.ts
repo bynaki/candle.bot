@@ -9,6 +9,7 @@ export {
   Market,
   BithumbCC,
   BitfinexCC,
+  BinanceCC,
   CandleData,
   BithumbCandleData,
   CrawlHost,

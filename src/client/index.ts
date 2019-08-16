@@ -3,6 +3,7 @@ export {
   Market,
   BithumbCC,
   BitfinexCC,
+  BinanceCC,
   CandleData,
   BithumbCandleData,
 } from 'cryptocurrency-crawler.client'
